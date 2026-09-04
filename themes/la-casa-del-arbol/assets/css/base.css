@@ -1,0 +1,113 @@
+/**
+ * Base visual system — La Casa del Árbol
+ * Primera versión. Ajustar tokens luego de validar el draft visual.
+ */
+
+:root {
+  --lcda-red: #EF3323;
+  --lcda-paper: #F4F2ED;
+  --lcda-mint: #B8DDBF;
+  --lcda-yellow: #F2C45E;
+  --lcda-black: #171717;
+  --lcda-border: 2px solid var(--lcda-red);
+  --lcda-content: 1200px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--lcda-paper);
+  color: var(--lcda-black);
+}
+
+.site-content {
+  overflow: hidden;
+}
+
+.entry-content > .alignwide {
+  max-width: var(--lcda-content);
+  margin-inline: auto;
+}
+
+.lcda-kicker {
+  font-size: .85rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.lcda-display {
+  font-size: clamp(2.5rem, 8vw, 7rem);
+  line-height: .92;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+
+.lcda-panel {
+  border: var(--lcda-border);
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  background: var(--lcda-paper);
+}
+
+.lcda-panel--red {
+  background: var(--lcda-red);
+  color: #fff;
+  border-color: var(--lcda-red);
+}
+
+.lcda-button,
+.wp-block-button__link {
+  border-radius: 0 !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.lcda-button:hover,
+.wp-block-button__link:hover {
+  transform: translateY(-2px);
+  opacity: .92;
+}
+
+.lcda-date-burst {
+  display: inline-grid;
+  place-items: center;
+  width: 4.75rem;
+  aspect-ratio: 1;
+  background: var(--lcda-mint);
+  color: var(--lcda-red);
+  font-size: 1.65rem;
+  font-weight: 900;
+  clip-path: polygon(
+    50% 0%, 58% 14%, 70% 4%, 74% 20%, 89% 14%, 86% 31%,
+    100% 35%, 88% 47%, 98% 59%, 81% 63%, 85% 79%, 68% 74%,
+    60% 91%, 50% 78%, 40% 91%, 32% 74%, 15% 79%, 19% 63%,
+    2% 59%, 12% 47%, 0% 35%, 14% 31%, 11% 14%, 26% 20%,
+    30% 4%, 42% 14%
+  );
+}
+
+.lcda-whatsapp-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--lcda-red);
+  color: var(--lcda-mint);
+}
+
+.lcda-whatsapp-cta a {
+  color: inherit;
+}
+
+@media (max-width: 768px) {
+  .lcda-display {
+    font-size: clamp(2.4rem, 15vw, 4.5rem);
+  }
+}
