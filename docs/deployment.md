@@ -41,13 +41,15 @@ Paths are shown relative to the configured values:
 |---|---|
 | Deploy target | `<RemoteThemeDir>` |
 | Backups | `<RemoteHome>/lcda-theme-backups/` (outside the web root, not web-accessible) |
-| Upload and staging (temporary) | `<RemoteHome>/lcda-deploy-<id>.tar` and `<RemoteHome>/.lcda-deploy/<id>/` |
+| Staging (temporary) | `<RemoteHome>/.lcda-deploy/<id>/` (mode `700`) |
+
+Nothing is uploaded to the home directory itself. The package travels inside the deploy SSH connection and is written straight into the private staging directory.
 
 ## Prerequisites
 
-1. **Windows PowerShell 5.1+** with the built-in **OpenSSH client** (`ssh`, `scp`) and **Git** on `PATH`.
+1. **Windows PowerShell 5.1+** with the built-in **OpenSSH client** (`ssh`) and **Git** on `PATH`. `scp` is not used.
 2. **`deploy.local.ps1`** exists and is filled in (see Configuration).
-3. **SSH access works** with your existing authentication (key plus ssh-agent recommended, or password). The script stores no credentials. With password authentication you are prompted up to 3 times (verify, upload, deploy).
+3. **SSH access works** with your existing authentication (password, or key plus ssh-agent). The script stores no credentials. With password authentication you are prompted **twice**: once for verification, once for the deploy. `-VerifyOnly` prompts once.
 4. **The server's host key is already trusted.** The script uses `StrictHostKeyChecking=yes`, so it refuses to connect to an unknown or changed host key. First time only: run `ssh -p <RemotePort> <RemoteUser>@<RemoteHost>`, compare the fingerprint with the one shown in the hosting panel, accept it, and exit.
 5. **The remote child theme directory already exists** and is the `la-casa-del-arbol` Astra child theme. The script refuses to create it or to deploy anywhere else.
 6. **The theme changes are committed.** Only `HEAD` is deployed.
@@ -58,7 +60,9 @@ Only:
 
 - `wp-content/themes/la-casa-del-arbol/`: files from the release are added or overwritten.
 - `~/lcda-theme-backups/`: one new backup archive per deployment.
-- `~/lcda-deploy-<id>.tar` and `~/.lcda-deploy/<id>/`: temporary upload and staging, removed after a successful deploy.
+- `~/.lcda-deploy/<id>/`: temporary private staging, removed after a successful deploy.
+
+`-VerifyOnly`, and the verification step of a full run, write nothing at all.
 
 ## What the script never changes
 
@@ -69,22 +73,28 @@ Only:
 
 ## How it works
 
+Two SSH connections, no scp:
+
 ```
-LOCAL (Windows)                                   SERVER (read-only until step 6)
+LOCAL (Windows)                                   SERVER (read-only until step 5)
 0  load + validate deploy.local.ps1 (parsed as data, then read-only)
-1  checks: git/ssh/scp, repo root, theme files,
+1  checks: git/ssh, repo root, theme files,
    style.css identity, clean Git state for the theme
 2  package = git archive HEAD:themes/la-casa-del-arbol
    (LF line endings), SHA-256, file count
 3  ssh ──── verify (read-only) ─────────────────▶ account home, WordPress root, wp-config,
-                                                  themes dir, child theme identity
+        ─── package stream (stdin) ────────────▶  themes dir, child theme identity
                                                   (Template: astra, Text Domain), not a
                                                   symlink, Astra present; prints WP,
-                                                  Astra, child and PHP versions
+                                                  Astra, child and PHP versions;
+                                                  warns about stale leftovers;
+                                                  TRANSPORT CHECK: decode + SHA-256 the
+                                                  stream in memory, must equal the local
+                                                  SHA-256 (nothing is written)
 4  prompt: type DEPLOY  (anything else = cancel, exit 2)
-5  scp ──── package ────────────────────────────▶ ~/lcda-deploy-<id>.tar
-6  ssh ──── deploy ─────────────────────────────▶ a. re-verify target
-                                                  b. move package to ~/.lcda-deploy/<id>/
+5  ssh ──── deploy ─────────────────────────────▶ a. re-verify target, warn about leftovers
+        ─── package stream (stdin) ────────────▶  b. decode the stream into
+                                                     ~/.lcda-deploy/<id>/theme.tar (dir 700)
                                                   c. SHA-256 must match; no absolute or ../
                                                      paths; no symlinks; file count must match
                                                   d. extract to staging; php -l every PHP file
@@ -97,16 +107,25 @@ LOCAL (Windows)                                   SERVER (read-only until step 6
                                                   g. verify every deployed file by SHA-256
                                                   h. list remote files not in the release
                                                   i. remove this deployment's staging dir
-7  summary: commit, deployment id, backup path
+6  summary: commit, deployment id, backup path
 ```
 
-The remote part is a bash script embedded in `deploy-theme.ps1`. It is sent base64-encoded inside the SSH command, so nothing extra is written to the server and Windows line endings can't corrupt it. It runs with `set -Eeuo pipefail`: any failed command stops it with a non-zero exit, and the PowerShell script stops on any non-zero exit.
+**The remote script.** A bash script embedded in `deploy-theme.ps1`. It is sent base64-encoded inside the SSH command, so no script file is written to the server and Windows line endings can't corrupt it. It runs with `set -Eeuo pipefail`: any failed command stops it with a non-zero exit.
+
+**Package streaming.** The package goes over the same SSH connection as the script, on the connection's standard input, as base64 text. Windows PowerShell 5.1 can't pipe raw binary to a native program, so base64 is used, and the server drops any line breaks. The SSH command keeps that input open on file descriptor 3 (`exec 3<&0`), because the script itself arrives on bash's standard input. The password prompt reads the console, not standard input, so password authentication works unchanged. Any damage in transit (truncation, a changed byte) is caught by the SHA-256 check before anything is extracted.
+
+**Completion check.** Each remote run ends with an exact line, `[remote] RESULT: <verify|deploy> OK <id>`. The PowerShell script treats a run as successful only when ssh exits with 0 **and** this line appeared. A remote script that was cut short or never ran can't pass as a success.
+
+**Why no scp.** Before 2026-09-23 the package went up with a separate scp connection, which meant three password logins per run. On the first real deployment, the server closed the third login (the deploy SSH) during authentication. The package had already been uploaded to `~`, so it was left behind. Streaming removes that connection and that leftover: if the deploy connection fails at login now, nothing at all has been written to the server.
 
 **Failure behavior**
 
-- If anything fails in steps 1–6d, the live theme was not touched.
-- If step 6e (backup) fails, the live theme was not touched.
-- If 6f or 6g fails, the script prints the backup path for rollback and exits non-zero.
+- Step 3 (verification or transport check) fails: nothing was written. Nothing is uploaded until you type DEPLOY.
+- The deploy connection fails at login (ssh exit code 255 with no `[remote]` lines): nothing was written. Just run again.
+- Steps 5a–5d fail (stream damaged, checksum, unsafe paths, file count, PHP lint): the live theme was not touched. This run's staging dir `~/.lcda-deploy/<id>/` may remain (private, `700`). The next run reports it as stale.
+- Step 5e (backup) fails: the live theme was not touched.
+- Step 5f or 5g fails: the script prints the backup path for rollback and exits non-zero.
+- Any failure makes the PowerShell script exit with code 1 and print `DEPLOY ABORTED` or the remote error.
 
 ## Backup
 
@@ -123,9 +142,9 @@ The remote part is a bash script embedded in `deploy-theme.ps1`. It is sent base
 2. Dry runs:
    ```powershell
    .\deploy-theme.ps1 -LocalOnly     # local checks and package only, no network
-   .\deploy-theme.ps1 -VerifyOnly    # adds the read-only server check
+   .\deploy-theme.ps1 -VerifyOnly    # adds the read-only server check and transport check
    ```
-   Read the versions it reports (WordPress, Astra, current child theme, PHP).
+   Read the versions it reports (WordPress, Astra, current child theme, PHP) and any stale-leftover warnings. It must end with `Transport check OK` and `[remote] RESULT: verify OK <id>`. That proves the package reaches the server intact through this machine's PowerShell and OpenSSH, without writing anything there.
 3. Deploy:
    ```powershell
    .\deploy-theme.ps1
@@ -177,6 +196,22 @@ Then purge caches and repeat the post-deploy checks.
 
 Because nothing is deleted remotely, a file removed from the repository stays on the server. Each deployment lists these files as "Remote files not in this release (kept, NOT deleted)". Usually they're harmless, since WordPress only loads what the theme references. Exception: files in `patterns/` are auto-registered, so a removed pattern file still shows in the editor. Removing orphans is a manual, reviewed step: check the list, and delete over SSH only the specific paths approved. Automatic mirroring with deletions is intentionally not implemented.
 
+## Stale leftovers
+
+Every run (verification and deploy) lists leftovers of earlier runs, read-only:
+
+- **Legacy upload files** in the home directory named exactly `lcda-deploy-YYYYMMDD-HHMMSS.tar`. The current workflow never creates them, so any you see come from the old scp-based workflow (for example the 2026-09-23 failed run).
+- **Stale staging directories** in `~/.lcda-deploy/` named exactly `YYYYMMDD-HHMMSS`, left by a run that failed before its cleanup step.
+
+The warning is informational. It never deletes anything and never blocks a deploy. Only regular files and real directories matching these exact names are listed; symlinks and other names are ignored, and a symlinked `~/.lcda-deploy` or `~/lcda-theme-backups` makes the script stop.
+
+**Cleanup is manual.** After reviewing the list, and only once a deployment has succeeded, delete the exact paths over SSH, without wildcards. For example:
+
+```bash
+rm -- ~/lcda-deploy-20260923-175458.tar
+rm -rf -- ~/.lcda-deploy/20260923-190000
+```
+
 ## Troubleshooting
 
 - **`Host key verification failed`:** the host key isn't trusted yet, or it changed. See prerequisite 3. Don't bypass it.
@@ -184,4 +219,7 @@ Because nothing is deleted remotely, a file removed from the repository stays on
 - **"child theme directory not found" / "not the la-casa-del-arbol theme"**: the server doesn't look as expected. Stop and inspect it manually; don't change the script's paths to force a deploy.
 - **"PHP lint failed"**: a PHP file in the release has a syntax error. The live theme was not changed.
 - **A failure after the backup step**: the output prints the backup path; follow Rollback.
-- **Leftovers after a failure**: `~/lcda-deploy-<id>.tar` and `~/.lcda-deploy/<id>/` may remain for inspection. They're outside `public_html` and safe to delete by hand. The next deployment uses a new id.
+- **`ssh exited with code 255` and no `[remote]` lines**: the connection or login failed before the remote script started (wrong password, or the server refusing repeated logins). Nothing was changed. Wait a moment and run again.
+- **`transport check FAILED` / `package checksum mismatch`**: the package arrived damaged. Nothing live was changed. Run again; if it repeats, stop and investigate the connection.
+- **`the remote script did not report completion`**: ssh exited 0, but the remote script didn't finish (cut short, or didn't run). Treat the run as failed. Check the `[remote]` lines to see how far it got.
+- **Leftovers after a failure**: `~/.lcda-deploy/<id>/` may remain for inspection. It's private (`700`), outside `public_html`, and reported as stale by later runs. See Stale leftovers for the manual cleanup.

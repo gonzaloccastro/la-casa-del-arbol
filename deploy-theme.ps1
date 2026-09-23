@@ -19,17 +19,19 @@
     server is modified: no WordPress core, plugins, uploads, Astra parent
     theme or database.
 
-    How:
+    How (two SSH connections, no scp):
       1. Local checks: tools, repository, theme files, clean Git state.
       2. Package: git archive of HEAD:themes/la-casa-del-arbol (LF line
          endings), plus SHA-256 checksum and file count.
       3. Remote verification (read-only SSH): account, WordPress root, themes
-         dir, child theme identity, Astra parent present. Prints versions.
+         dir, child theme identity, Astra parent present. Prints versions
+         and stale leftovers of earlier runs. Transport check: the package
+         is streamed over the same connection, and the server hashes it in
+         memory (nothing written) and must match the local SHA-256.
       4. Confirmation: you must type DEPLOY.
-      5. Upload (scp): the package goes to the SSH user's home directory,
-         outside public_html.
-      6. Remote deploy (SSH): re-verify, check the checksum, extract to a
-         private staging dir, PHP lint, create and verify a timestamped
+      5. Remote deploy (SSH): the package is streamed over the connection
+         straight into a private staging dir. Re-verify, check the
+         checksum, extract, PHP lint, create and verify a timestamped
          backup of the live child theme, copy the files over the live theme
          (overwrite, never delete), verify every deployed file by checksum,
          report remote files not in the package (NOT deleted), clean staging.
@@ -40,7 +42,7 @@
 
 .PARAMETER VerifyOnly
     Run local checks, build the package, and run the read-only remote
-    verification. Changes nothing on the server.
+    verification and transport check. Changes nothing on the server.
 
 .PARAMETER LocalOnly
     Run local checks and build the package only. No network connection.
@@ -102,6 +104,8 @@ $RequiredFiles = @(
 # file is written on the server for it, and Windows line endings or encodings
 # can't corrupt it. Placeholders __X__ are replaced from the validated
 # configuration. Modes: "verify" (read-only) and "deploy".
+# The package arrives as base64 text on the SSH connection's stdin, which the
+# SSH command keeps open on fd 3 (fd 0 carries the script itself).
 # ---------------------------------------------------------------------------
 $RemoteScriptTemplate = @'
 set -Eeuo pipefail
@@ -121,7 +125,6 @@ THEME_DIR='__REMOTE_THEME_DIR__'
 PARENT_DIR="$THEMES_DIR/astra"
 BACKUP_DIR="$EXPECTED_HOME/lcda-theme-backups"
 STAGE_ROOT="$EXPECTED_HOME/.lcda-deploy"
-UPLOAD="$EXPECTED_HOME/lcda-deploy-$STAMP.tar"
 
 OVERLAY_STARTED=0
 BACKUP=""
@@ -153,9 +156,11 @@ verify_target() {
   [ "$HOME" = "$EXPECTED_HOME" ] || fail "unexpected account home: $HOME"
   [ "$THEME_DIR" = "$THEMES_DIR/$SLUG" ] || fail "configured theme dir is not <wp root>/wp-content/themes/$SLUG"
   local c
-  for c in tar sha256sum find cp mv grep sort comm wc cut sed; do
+  for c in tar sha256sum base64 tr find cp grep sort comm wc cut sed; do
     command -v "$c" >/dev/null 2>&1 || fail "missing remote command: $c"
   done
+  [ ! -L "$STAGE_ROOT" ] || fail "staging root is a symlink: $STAGE_ROOT"
+  [ ! -L "$BACKUP_DIR" ] || fail "backup directory is a symlink: $BACKUP_DIR"
   [ -d "$WP_ROOT" ] || fail "WordPress root not found: $WP_ROOT"
   { [ -f "$WP_ROOT/wp-load.php" ] && [ -f "$WP_ROOT/wp-includes/version.php" ]; } || fail "not a WordPress root: $WP_ROOT"
   { [ -f "$WP_ROOT/wp-config.php" ] || [ -f "$(dirname "$WP_ROOT")/wp-config.php" ]; } || fail "wp-config.php not found"
@@ -190,24 +195,72 @@ report_target() {
   fi
 }
 
-deploy() {
+# Leftovers of earlier runs: informational only, never deleted, never
+# blocking. Strict name patterns; find does not follow symlinks (-type f/d
+# never match a symlink).
+report_stale() {
+  local uploads stages=""
+  uploads="$(find "$EXPECTED_HOME" -maxdepth 1 -type f -name 'lcda-deploy-*.tar' -printf '%f  %s bytes  %TY-%Tm-%Td %TH:%TM\n' 2>/dev/null \
+    | grep -E '^lcda-deploy-[0-9]{8}-[0-9]{6}\.tar  ' | sort || true)"
+  if [ -d "$STAGE_ROOT" ] && [ ! -L "$STAGE_ROOT" ]; then
+    stages="$(find "$STAGE_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%f  %TY-%Tm-%Td %TH:%TM\n' 2>/dev/null \
+      | grep -E '^[0-9]{8}-[0-9]{6}  ' | sort || true)"
+  fi
+  if [ -z "$uploads" ] && [ -z "$stages" ]; then
+    log "Stale leftovers:   none"
+    return 0
+  fi
+  if [ -n "$uploads" ]; then
+    log "WARNING: stale upload files from an earlier run in $EXPECTED_HOME (unused, NOT deleted):"
+    printf '%s\n' "$uploads" | sed 's/^/[remote]   /'
+  fi
+  if [ -n "$stages" ]; then
+    log "WARNING: stale staging directories in $STAGE_ROOT (unused, NOT deleted):"
+    printf '%s\n' "$stages" | sed 's/^/[remote]   /'
+  fi
+  log "These are informational only. Remove them by hand after review (see docs/deployment.md)."
+}
+
+check_args() {
   [[ "$STAMP" =~ ^[0-9]{8}-[0-9]{6}$ ]] || fail "invalid deployment id: $STAMP"
   [[ "$PKG_SHA" =~ ^[0-9a-f]{64}$ ]] || fail "invalid package checksum"
   [[ "$EXPECTED_FILES" =~ ^[0-9]+$ ]] || fail "invalid expected file count"
+  { true <&3; } 2>/dev/null || fail "no package stream on fd 3"
+}
 
+# Package stream (base64 text on fd 3) -> raw bytes on stdout. Anything
+# outside the base64 alphabet (CR, LF, a BOM) is dropped; the SHA-256 check
+# that always follows catches any other damage.
+read_package() {
+  tr -cd 'A-Za-z0-9+/=' <&3 | base64 -d
+}
+
+# Read-only transport check: decode and hash the stream in memory.
+transport_check() {
+  local got
+  got="$(read_package | sha256sum | cut -d' ' -f1)" || fail "transport check FAILED: the package stream could not be decoded"
+  exec 3<&-
+  [ "$got" = "$PKG_SHA" ] || fail "transport check FAILED: received SHA-256 $got, expected $PKG_SHA"
+  log "Transport check OK: the streamed package matches SHA-256 $PKG_SHA (nothing written)"
+}
+
+deploy() {
+  check_args
   verify_target
   report_target
+  report_stale
 
-  # 1. Package: move the upload into a private staging dir and check it.
-  [ -f "$UPLOAD" ] || fail "uploaded package not found: $UPLOAD"
+  # 1. Package: stream it into a private staging dir and check it.
   local stage="$STAGE_ROOT/$STAMP"
   [ ! -e "$stage" ] || fail "staging directory already exists: $stage"
   mkdir -p "$STAGE_ROOT"
   chmod 700 "$STAGE_ROOT"
   mkdir "$stage"
-  mv "$UPLOAD" "$stage/theme.tar"
+  chmod 700 "$stage"
   local pkg="$stage/theme.tar"
-  [ "$(sha256sum "$pkg" | cut -d' ' -f1)" = "$PKG_SHA" ] || fail "package checksum mismatch (upload corrupted?)"
+  read_package > "$pkg" || fail "package stream could not be decoded (transfer interrupted?); the live theme was not changed"
+  exec 3<&-
+  [ "$(sha256sum "$pkg" | cut -d' ' -f1)" = "$PKG_SHA" ] || fail "package checksum mismatch (transfer corrupted?); the live theme was not changed"
   if tar -tf "$pkg" | grep -Eq '^/|(^|/)\.\.(/|$)'; then fail "package contains unsafe paths"; fi
 
   mkdir "$stage/theme"
@@ -277,8 +330,11 @@ deploy() {
 
 case "$MODE" in
   verify)
+    check_args
     verify_target
     report_target
+    report_stale
+    transport_check
     log "Read-only verification complete. Nothing was changed."
     ;;
   deploy)
@@ -288,6 +344,9 @@ case "$MODE" in
     fail "unknown mode: $MODE"
     ;;
 esac
+# Completion marker: the local side requires this exact line, so a remote
+# script that was cut short or never ran can't pass as a success.
+log "RESULT: $MODE OK $STAMP"
 '@
 
 # ---------------------------------------------------------------------------
@@ -317,8 +376,28 @@ function Get-SshArgs {
 }
 
 # SSH command that decodes the remote script and runs it in the given mode.
+# "exec 3<&0" keeps the connection's stdin (the package stream) on fd 3,
+# because bash -s reads the script itself from its own stdin.
 function Get-RemoteCommand([string] $Encoded, [string[]] $ScriptArgs) {
-    return "printf %s $Encoded | base64 -d | bash -s -- $($ScriptArgs -join ' ')"
+    return "exec 3<&0; printf %s $Encoded | base64 -d | bash -s -- $($ScriptArgs -join ' ')"
+}
+
+# Run the remote script over SSH, streaming the package (base64 text) on
+# stdin. Windows PowerShell 5.1 can't pipe raw bytes to a native command,
+# hence base64. The password prompt, if any, reads the console, not stdin.
+# Success requires exit code 0 AND the script's exact completion line.
+function Invoke-RemoteScript([string] $Target, [string] $Encoded, [string[]] $ScriptArgs, [string] $PackageBase64) {
+    $sshArgs = (Get-SshArgs) + @($Target, (Get-RemoteCommand $Encoded $ScriptArgs))
+    $resultLine = "[remote] RESULT: $($ScriptArgs[0]) OK $($ScriptArgs[1])"
+    $completed = $false
+    $PackageBase64 | & 'ssh' @sshArgs | ForEach-Object {
+        Write-Host $_
+        if ("$_" -ceq $resultLine) { $completed = $true }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Stop-Deploy "ssh exited with code $LASTEXITCODE (code 255 with no [remote] lines above: connection or authentication failed before the remote script started)"
+    }
+    if (-not $completed) { Stop-Deploy 'the remote script did not report completion; treat this run as failed' }
 }
 
 # Load and validate deploy.local.ps1.
@@ -408,7 +487,7 @@ try {
     # 1. Local tools --------------------------------------------------------
     Write-Step 'Checking local tools'
     $tools = @('git')
-    if (-not $LocalOnly) { $tools += @('ssh', 'scp') }
+    if (-not $LocalOnly) { $tools += @('ssh') }
     foreach ($tool in $tools) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { Stop-Deploy "required tool not found: $tool" }
         Write-Info "$tool OK"
@@ -475,11 +554,15 @@ try {
         $remoteScript = $RemoteScriptTemplate.Replace('__REMOTE_HOME__', $RemoteHome).Replace('__WP_ROOT__', $RemoteWpRoot).Replace('__REMOTE_THEME_DIR__', $RemoteThemeDir).Replace('__THEME_SLUG__', $ThemeSlug)
         $remoteScript = $remoteScript -replace "`r`n", "`n"
         $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($remoteScript))
+        $packageBase64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($package))
+        $scriptArgs = @($stamp, $packageSha, "$($headFiles.Count)")
         $target = "$RemoteUser@$RemoteHost"
+        # Text piped to native commands is encoded with this: keep it ASCII (no BOM).
+        $OutputEncoding = New-Object System.Text.ASCIIEncoding
 
-        # 5. Remote verification (read-only) --------------------------------
-        Write-Step 'Verifying remote target (read-only)'
-        Invoke-Native 'ssh' ((Get-SshArgs) + @($target, (Get-RemoteCommand $encoded @('verify'))))
+        # 5. Remote verification and transport check (read-only) ------------
+        Write-Step 'Verifying remote target and package transport (read-only)'
+        Invoke-RemoteScript $target $encoded (@('verify') + $scriptArgs) $packageBase64
 
         if ($VerifyOnly) {
             Write-Step 'Verification complete. Nothing was uploaded or changed.'
@@ -495,15 +578,9 @@ try {
                 $exitCode = 2
             }
             else {
-                # 7. Upload --------------------------------------------------
-                Write-Step 'Uploading package (scp)'
-                $remoteUpload = "lcda-deploy-$stamp.tar"
-                Invoke-Native 'scp' @('-P', "$RemotePort", '-o', 'ConnectTimeout=20', '-o', 'StrictHostKeyChecking=yes', '-q', $package, "${target}:$remoteUpload")
-                Write-Info "Uploaded to $RemoteHome/$remoteUpload"
-
-                # 8. Remote deploy -------------------------------------------
-                Write-Step 'Deploying on the server (backup, copy, verify)'
-                Invoke-Native 'ssh' ((Get-SshArgs) + @($target, (Get-RemoteCommand $encoded @('deploy', $stamp, $packageSha, "$($headFiles.Count)"))))
+                # 7. Remote deploy (package streamed over the connection) ----
+                Write-Step 'Deploying on the server (stream, backup, copy, verify)'
+                Invoke-RemoteScript $target $encoded (@('deploy') + $scriptArgs) $packageBase64
 
                 Write-Step 'Deployment complete'
                 Write-Info "Commit:        $commit"
