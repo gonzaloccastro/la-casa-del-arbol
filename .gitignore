@@ -8,3 +8,6 @@ Thumbs.db
 
 # Local AI development reports
 docs/claude-reports/
+
+# Local deployment configuration (real host, user and server paths)
+deploy.local.ps1
