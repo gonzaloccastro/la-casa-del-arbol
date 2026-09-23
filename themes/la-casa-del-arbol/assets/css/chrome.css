@@ -1,0 +1,547 @@
+/**
+ * La Casa del Árbol — site chrome: header, mobile menu, footer (Design V1).
+ *
+ * Source: Final Design Handoff §1.6 (header), §1.7 (mobile navigation),
+ * §1.18 (footer), §1.20 (touch targets), §1.21 (breakpoints).
+ * Loaded on Lienzo pages only (see inc/assets.php).
+ *
+ * Where the prototype leaves line-height unset, it renders at the font's
+ * "normal" line-height, so the chrome resets to normal and sets explicit
+ * values only where the design does.
+ *
+ * Hit areas: some interactive elements are visually smaller than 44px. Their
+ * clickable area is extended with padding + equal negative margin (or an
+ * absolutely positioned pseudo-element), so nothing moves visually.
+ */
+
+/* ==========================================================================
+   Header (Handoff §1.6)
+   ========================================================================== */
+
+.lcda-header {
+	position: sticky;
+	top: var(--lcda-sticky-top);
+	z-index: 20;
+	background: var(--lcda-paper);
+	border-bottom: var(--lcda-rule-header);
+	line-height: normal;
+}
+
+.lcda-header__inner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding-block: 14px;
+}
+
+/* Logo: symbol only, links home. 5px invisible hit extension each side. */
+.lcda-header__logo {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	margin: -5px;
+	padding: 5px;
+	color: var(--lcda-ink);
+}
+
+.lcda-header__logo:hover {
+	color: var(--lcda-ink);
+}
+
+.lcda-header__logo-mark {
+	display: block;
+	width: 52px;
+	height: 33px;
+}
+
+/* Primary nav: Jost 600 10.5px, uppercase, 13px between items, single line,
+   scrolls horizontally instead of wrapping.
+   The 13px gap is built from 6.5px inline padding on each link (the nav's
+   negative inline margin cancels the outer halves), and the nav stretches
+   over the header's vertical padding, so each link's hit area spans the
+   header height without changing any position. */
+.lcda-header__nav {
+	display: flex;
+	align-self: stretch;
+	min-width: 0;
+	margin-block: -14px;
+	margin-inline: -6.5px;
+	overflow-x: auto;
+}
+
+.lcda-nav {
+	display: flex;
+	align-items: stretch;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-family: var(--lcda-font-nav);
+	font-size: 0.65625rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.lcda-nav > li {
+	display: flex;
+	margin: 0;
+	padding: 0;
+}
+
+.lcda-nav a {
+	display: flex;
+	align-items: center;
+	padding-inline: 6.5px;
+	color: var(--lcda-ink);
+	text-decoration: none;
+	opacity: 0.5;
+}
+
+.lcda-nav a:hover {
+	color: var(--lcda-ink);
+}
+
+/* Active item: full opacity + 2px red underline 3px below the text. */
+.lcda-nav :is(.current-menu-item, .current-menu-ancestor, .current_page_parent) > a {
+	opacity: 1;
+}
+
+.lcda-nav :is(.current-menu-item, .current-menu-ancestor, .current_page_parent) > a .lcda-menu-label {
+	padding-bottom: 3px;
+	border-bottom: 2px solid var(--lcda-red);
+}
+
+/* WhatsApp CTA: primary compact (Handoff §1.12). 5px invisible vertical hit
+   extension (about 34px → 44px). */
+.lcda-header__cta,
+.lcda-header__cta:hover,
+.lcda-header__cta:focus {
+	position: relative;
+	flex-shrink: 0;
+	padding: 10px 16px;
+	background: var(--lcda-red);
+	color: var(--lcda-white);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.75rem;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-decoration: none;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.lcda-header__cta::after {
+	content: "";
+	position: absolute;
+	inset: -5px 0;
+}
+
+/* "Menú" button, mobile only. Selectors include :hover/:focus to override
+   Astra's global button colors. */
+.lcda-header__toggle,
+.lcda-header__toggle:hover,
+.lcda-header__toggle:focus {
+	display: none;
+	align-items: center;
+	gap: 9px;
+	min-height: var(--lcda-hit-min);
+	margin: 0;
+	padding: 9px 14px;
+	border: 2px solid var(--lcda-ink);
+	border-radius: 0;
+	background: none;
+	box-shadow: none;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.6875rem;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.lcda-header__toggle-icon {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.lcda-header__toggle-icon > span {
+	display: block;
+	width: 16px;
+	height: 2px;
+	background: currentColor;
+}
+
+@media (max-width: 767px) {
+	.lcda-header__inner {
+		gap: 12px;
+		padding-block: 12px;
+	}
+
+	.lcda-header__nav,
+	.lcda-header__cta {
+		display: none;
+	}
+
+	/* 34×21 symbol; hit area extended to about 44px. */
+	.lcda-header__logo {
+		margin: -11px -5px;
+		padding: 11px 5px;
+	}
+
+	.lcda-header__logo-mark {
+		width: 34px;
+		height: 21px;
+	}
+
+	.lcda-header__toggle,
+	.lcda-header__toggle:hover,
+	.lcda-header__toggle:focus {
+		display: flex;
+	}
+}
+
+/* ==========================================================================
+   Mobile navigation dialog (Handoff §1.7)
+   Instant show/hide (no animation). Scroll lock via the class set by
+   assets/js/mobile-menu.js.
+   ========================================================================== */
+
+html.lcda-menu-open,
+html.lcda-menu-open body {
+	overflow: hidden;
+}
+
+.lcda-mobile-menu {
+	position: fixed;
+	inset: 0;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	max-height: none;
+	margin: 0;
+	padding: 20px 24px;
+	overflow-y: auto;
+	border: 0;
+	background: var(--lcda-red);
+	color: var(--lcda-paper);
+	line-height: normal;
+}
+
+.lcda-mobile-menu[open] {
+	display: flex;
+	flex-direction: column;
+}
+
+.lcda-mobile-menu::backdrop {
+	background: transparent;
+}
+
+.lcda-mobile-menu__top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 40px;
+}
+
+.lcda-mobile-menu__logo {
+	display: block;
+	width: 34px;
+	height: 21px;
+	color: var(--lcda-paper);
+}
+
+.lcda-mobile-menu__close,
+.lcda-mobile-menu__close:hover,
+.lcda-mobile-menu__close:focus {
+	min-height: var(--lcda-hit-min);
+	margin: 0;
+	padding: 9px 14px;
+	border: 2px solid var(--lcda-paper);
+	border-radius: 0;
+	background: none;
+	box-shadow: none;
+	color: var(--lcda-paper);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.6875rem;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.lcda-mobile-menu__nav {
+	flex: 1;
+}
+
+.lcda-mobile-nav {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.lcda-mobile-nav > li {
+	margin: 0;
+	padding: 0;
+	border-bottom: 1px dashed var(--lcda-divider-on-red);
+}
+
+.lcda-mobile-nav > li:last-child {
+	border-bottom: 0;
+}
+
+.lcda-mobile-nav a,
+.lcda-mobile-nav a:hover,
+.lcda-mobile-nav a:focus {
+	display: block;
+	padding: 16px 0;
+	color: var(--lcda-paper);
+	font-family: var(--lcda-font-display);
+	font-size: 1.7rem;
+	font-weight: 400;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+
+.lcda-mobile-nav a {
+	opacity: 0.55;
+}
+
+.lcda-mobile-nav :is(.current-menu-item, .current-menu-ancestor, .current_page_parent) > a {
+	opacity: 1;
+}
+
+.lcda-mobile-menu__cta,
+.lcda-mobile-menu__cta:hover,
+.lcda-mobile-menu__cta:focus {
+	display: block;
+	margin-top: 24px;
+	padding: 16px;
+	background: var(--lcda-ink);
+	color: var(--lcda-white);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.8125rem;
+	font-weight: 900;
+	letter-spacing: 0.03em;
+	text-align: center;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+
+/* The dialog exists only in the mobile layout. */
+@media (min-width: 768px) {
+	.lcda-mobile-menu,
+	.lcda-mobile-menu[open] {
+		display: none;
+	}
+}
+
+/* ==========================================================================
+   Footer (Handoff §1.18)
+   ========================================================================== */
+
+.lcda-footer {
+	background: var(--lcda-ink);
+	color: var(--lcda-paper);
+	border-top: var(--lcda-rule-footer);
+	line-height: normal;
+}
+
+.lcda-footer__main {
+	box-sizing: border-box;
+	display: grid;
+	grid-template-columns: 1.3fr 1fr 1fr 1.2fr;
+	gap: 40px;
+	max-width: var(--lcda-max);
+	margin: 0 auto;
+	padding: 56px 32px 28px;
+}
+
+.lcda-footer__logo {
+	display: block;
+	width: 130px;
+	height: 82px;
+	color: var(--lcda-paper);
+}
+
+.lcda-footer__title {
+	margin: 0 0 14px;
+	color: var(--lcda-yellow);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.6875rem;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.lcda-footer__address {
+	font-style: normal;
+}
+
+.lcda-footer__list {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-family: var(--lcda-font-body);
+	font-size: 0.875rem;
+}
+
+.lcda-footer__list > li {
+	margin: 0;
+	padding: 0;
+}
+
+/* Links fill the 9px gaps (4.5px above and below) so their hit areas are
+   contiguous; see the report for why 44px isn't reachable here. */
+.lcda-footer__list a,
+.lcda-footer__list a:hover,
+.lcda-footer__list a:focus {
+	display: block;
+	margin-block: -4.5px;
+	padding-block: 4.5px;
+	color: var(--lcda-paper);
+	text-decoration: none;
+}
+
+.lcda-footer__list--nav a {
+	opacity: 0.6;
+}
+
+.lcda-footer__list--nav :is(.current-menu-item, .current-menu-ancestor, .current_page_parent) > a {
+	opacity: 1;
+}
+
+.lcda-footer__lead {
+	margin: 0 0 12px;
+	color: var(--lcda-mint);
+	font-family: var(--lcda-font-body);
+	font-size: 0.84375rem;
+	line-height: 1.5;
+}
+
+/* Footer "Sumate" form: presentation only (see template-parts/site/footer.php). */
+.lcda-newsletter-form--footer {
+	display: flex;
+}
+
+.lcda-newsletter-form--footer .lcda-newsletter-form__input,
+.lcda-newsletter-form--footer .lcda-newsletter-form__input:focus {
+	flex: 1;
+	min-width: 0;
+	height: auto;
+	margin: 0;
+	padding: 10px 12px;
+	border: 1px solid var(--lcda-paper);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--lcda-white);
+	font-family: var(--lcda-font-body);
+	font-size: 0.8125rem;
+	line-height: normal;
+}
+
+.lcda-newsletter-form--footer .lcda-newsletter-form__button,
+.lcda-newsletter-form--footer .lcda-newsletter-form__button:hover,
+.lcda-newsletter-form--footer .lcda-newsletter-form__button:focus {
+	flex-shrink: 0;
+	margin: 0;
+	padding: 0 16px;
+	border: 1px solid var(--lcda-red);
+	border-radius: 0;
+	background: var(--lcda-red);
+	box-shadow: none;
+	color: var(--lcda-white);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.6875rem;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: normal;
+	text-transform: uppercase;
+}
+
+.lcda-footer__legal {
+	box-sizing: border-box;
+	display: flex;
+	justify-content: space-between;
+	max-width: var(--lcda-max);
+	margin: 0 auto;
+	padding: 18px 32px;
+	border-top: 1px solid var(--lcda-divider-on-dark);
+	color: var(--lcda-mint);
+	font-family: var(--lcda-font-body);
+	font-size: 0.75rem;
+}
+
+/* Keyboard focus on dark and red surfaces. */
+.lcda-footer :focus-visible,
+.lcda-mobile-menu :focus-visible {
+	outline-color: var(--lcda-paper);
+}
+
+/* Tablet fallback (Handoff §1.21): footer 4 → 2 columns. */
+@media (min-width: 768px) and (max-width: 1023px) {
+	.lcda-footer__main {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* Mobile: logo / Navegación | Visitanos / Sumate / stacked legal row. */
+@media (max-width: 767px) {
+	.lcda-footer__main {
+		grid-template-columns: 1fr 1fr;
+		gap: 36px 20px;
+		padding: 44px 24px 28px;
+	}
+
+	.lcda-footer__brand,
+	.lcda-footer__newsletter {
+		grid-column: 1 / -1;
+	}
+
+	.lcda-footer__logo {
+		width: 104px;
+		height: 66px;
+	}
+
+	.lcda-footer__title {
+		margin-bottom: 12px;
+	}
+
+	.lcda-footer__lead {
+		max-width: 340px;
+		margin-bottom: 14px;
+	}
+
+	.lcda-newsletter-form--footer {
+		gap: 10px;
+		width: 100%;
+	}
+
+	.lcda-newsletter-form--footer .lcda-newsletter-form__input,
+	.lcda-newsletter-form--footer .lcda-newsletter-form__input:focus {
+		padding: 13px 14px;
+	}
+
+	.lcda-newsletter-form--footer .lcda-newsletter-form__button,
+	.lcda-newsletter-form--footer .lcda-newsletter-form__button:hover,
+	.lcda-newsletter-form--footer .lcda-newsletter-form__button:focus {
+		padding: 13px 22px;
+	}
+
+	.lcda-footer__legal {
+		flex-direction: column;
+		gap: 4px;
+		padding: 16px 20px;
+	}
+}

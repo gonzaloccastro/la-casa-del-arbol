@@ -42,7 +42,7 @@
 	--lcda-divider-on-dark: rgba(252, 250, 246, 0.2);
 	--lcda-divider-on-red: rgba(252, 250, 246, 0.35);
 
-	/* Type (Handoff §1.2) — fallback stacks until licensed files are added */
+	/* Type (Handoff §1.2) — self-hosted fonts declared in theme.json */
 	--lcda-font-display: var(--wp--preset--font-family--display, Impact, sans-serif);
 	--lcda-font-ui: var(--wp--preset--font-family--ui, Arial, sans-serif);
 	--lcda-font-nav: var(--wp--preset--font-family--nav, sans-serif);
@@ -245,7 +245,7 @@ h6, .entry-content :where(h6) {
 	font-family: var(--lcda-font-ui);
 	font-size: 0.8125rem;
 	font-weight: 800;
-	line-height: 1.2;
+	line-height: normal;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 }
@@ -322,7 +322,7 @@ a:hover {
 	font-family: var(--lcda-font-ui);
 	font-size: 0.84375rem;
 	font-weight: 900;
-	line-height: 1.2;
+	line-height: normal;
 	letter-spacing: 0.03em;
 	text-decoration: none;
 	text-transform: uppercase;

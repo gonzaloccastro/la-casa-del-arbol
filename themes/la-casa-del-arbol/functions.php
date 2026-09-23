@@ -16,6 +16,8 @@ define( 'LCDA_DIR', get_stylesheet_directory() );
 define( 'LCDA_URI', get_stylesheet_directory_uri() );
 
 require_once LCDA_DIR . '/inc/setup.php';
+require_once LCDA_DIR . '/inc/menus.php';
+require_once LCDA_DIR . '/inc/template-tags.php';
 require_once LCDA_DIR . '/inc/assets.php';
 require_once LCDA_DIR . '/inc/astra.php';
 require_once LCDA_DIR . '/inc/patterns.php';

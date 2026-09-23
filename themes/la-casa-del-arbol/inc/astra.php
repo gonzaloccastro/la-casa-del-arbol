@@ -6,9 +6,9 @@
  * and actions, collected in this file. Astra itself is never edited.
  * Verified against Astra 4.13.x.
  *
- * Step 1 (foundations): layout overrides for the Lienzo template.
- * Step 2 will add the replacement of Astra's header and footer markup here
- * (hooks: astra_header / astra_footer).
+ * On Lienzo pages the theme owns the page: Astra's layout is forced to full
+ * width, and Astra's header and footer are replaced by the V1 site chrome
+ * (template-parts/site/). Other pages keep Astra's defaults for now.
  *
  * @package LaCasaDelArbol
  */
@@ -65,6 +65,45 @@ function lcda_astra_disable_on_canvas( $enabled ) {
 }
 add_filter( 'astra_the_title_enabled', 'lcda_astra_disable_on_canvas', 20 );
 add_filter( 'astra_featured_image_enabled', 'lcda_astra_disable_on_canvas', 20 );
+
+/**
+ * Lienzo: replace Astra's header and footer with the V1 site chrome.
+ *
+ * Everything Astra (or its add-ons) attaches to astra_header/astra_footer is
+ * Astra chrome: the legacy or builder header, the mobile header, the
+ * off-canvas popup, the cart flyout, and the legacy or builder footer. On
+ * Lienzo pages those regions belong to the theme, so every callback is
+ * removed and ours is added. Runs on template_redirect, after Astra has
+ * registered its hooks and once the page template is known. Astra's own
+ * header.php/footer.php still provide the document wrapper, including the
+ * skip link.
+ */
+function lcda_replace_astra_chrome() {
+	if ( ! lcda_is_canvas() ) {
+		return;
+	}
+
+	remove_all_actions( 'astra_header' );
+	remove_all_actions( 'astra_footer' );
+
+	add_action( 'astra_header', 'lcda_render_site_header' );
+	add_action( 'astra_footer', 'lcda_render_site_footer' );
+}
+add_action( 'template_redirect', 'lcda_replace_astra_chrome', 99 );
+
+/**
+ * Output the V1 header and mobile menu.
+ */
+function lcda_render_site_header() {
+	get_template_part( 'template-parts/site/header' );
+}
+
+/**
+ * Output the V1 footer.
+ */
+function lcda_render_site_footer() {
+	get_template_part( 'template-parts/site/footer' );
+}
 
 /**
  * Body class hook for Lienzo-specific CSS.

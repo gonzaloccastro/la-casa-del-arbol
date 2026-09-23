@@ -2,10 +2,10 @@
 /**
  * Front-end assets.
  *
- * Fonts: the approved families (Anton, Archivo, Jost, Work Sans) are declared
- * in theme.json with fallback stacks. No font files are loaded yet; once
- * licensed files are approved they are added as theme.json "fontFace"
- * entries, and WordPress prints the @font-face rules, so no code here changes.
+ * Fonts: the approved families (Anton, Archivo, Jost, Work Sans) are
+ * self-hosted WOFF2 files in assets/fonts/, declared as theme.json
+ * "fontFace" entries. WordPress prints the @font-face rules itself, so
+ * nothing is enqueued for them here. Sources and licenses: README.md.
  *
  * @package LaCasaDelArbol
  */
@@ -27,11 +27,13 @@ function lcda_asset_version( $relative_path ) {
 }
 
 /**
- * Enqueue theme styles.
+ * Enqueue theme styles and scripts.
  *
  * Neither Astra's style.css nor this theme's style.css holds any CSS (only
  * the theme header), so neither is enqueued. base.css loads after Astra's
- * main stylesheet so its resets win on equal specificity.
+ * main stylesheet so its resets win on equal specificity. The site chrome
+ * (header, mobile menu, footer) is only rendered on Lienzo pages, so its
+ * CSS and JS load only there.
  */
 function lcda_enqueue_assets() {
 	$deps = wp_style_is( 'astra-theme-css', 'registered' ) ? array( 'astra-theme-css' ) : array();
@@ -42,5 +44,25 @@ function lcda_enqueue_assets() {
 		$deps,
 		lcda_asset_version( 'assets/css/base.css' )
 	);
+
+	if ( lcda_is_canvas() ) {
+		wp_enqueue_style(
+			'lcda-chrome',
+			LCDA_URI . '/assets/css/chrome.css',
+			array( 'lcda-base' ),
+			lcda_asset_version( 'assets/css/chrome.css' )
+		);
+
+		wp_enqueue_script(
+			'lcda-mobile-menu',
+			LCDA_URI . '/assets/js/mobile-menu.js',
+			array(),
+			lcda_asset_version( 'assets/js/mobile-menu.js' ),
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
+		);
+	}
 }
 add_action( 'wp_enqueue_scripts', 'lcda_enqueue_assets', 20 );
