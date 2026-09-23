@@ -3,151 +3,178 @@
   "version": 3,
   "settings": {
     "appearanceTools": true,
+    "border": {
+      "color": true,
+      "radius": false,
+      "style": true,
+      "width": true
+    },
+    "shadow": {
+      "defaultPresets": false,
+      "presets": []
+    },
     "layout": {
       "contentSize": "760px",
-      "wideSize": "1200px"
+      "wideSize": "1440px"
     },
     "color": {
+      "custom": false,
+      "customGradient": false,
+      "customDuotone": false,
       "defaultPalette": false,
+      "defaultGradients": false,
+      "defaultDuotone": false,
+      "gradients": [],
+      "duotone": [],
+      "link": true,
       "palette": [
-        {
-          "slug": "casa-red",
-          "color": "#EF3323",
-          "name": "Rojo Casa"
-        },
-        {
-          "slug": "casa-paper",
-          "color": "#F4F2ED",
-          "name": "Papel"
-        },
-        {
-          "slug": "casa-mint",
-          "color": "#B8DDBF",
-          "name": "Menta"
-        },
-        {
-          "slug": "casa-yellow",
-          "color": "#F2C45E",
-          "name": "Amarillo"
-        },
-        {
-          "slug": "casa-black",
-          "color": "#171717",
-          "name": "Negro"
-        },
-        {
-          "slug": "white",
-          "color": "#FFFFFF",
-          "name": "Blanco"
-        }
+        { "slug": "ink", "color": "#171717", "name": "Tinta" },
+        { "slug": "paper", "color": "#FCFAF6", "name": "Papel" },
+        { "slug": "white", "color": "#FFFFFF", "name": "Blanco" },
+        { "slug": "red", "color": "#EF3323", "name": "Rojo Casa" },
+        { "slug": "mint", "color": "#B8DDBF", "name": "Menta" },
+        { "slug": "yellow", "color": "#F2C45E", "name": "Amarillo" },
+        { "slug": "placeholder", "color": "#E7E3D9", "name": "Placeholder" },
+        { "slug": "body-muted", "color": "#3A3A3A", "name": "Texto secundario" },
+        { "slug": "body-soft", "color": "#5A5A5A", "name": "Texto suave" }
       ]
     },
     "spacing": {
-      "units": [
-        "px",
-        "rem",
-        "em",
-        "%",
-        "vw",
-        "vh"
-      ],
+      "defaultSpacingSizes": false,
+      "units": ["px", "rem", "em", "%", "vw", "vh"],
       "spacingSizes": [
-        {
-          "slug": "10",
-          "size": "0.5rem",
-          "name": "XS"
-        },
-        {
-          "slug": "20",
-          "size": "1rem",
-          "name": "S"
-        },
-        {
-          "slug": "30",
-          "size": "1.5rem",
-          "name": "M"
-        },
-        {
-          "slug": "40",
-          "size": "2.5rem",
-          "name": "L"
-        },
-        {
-          "slug": "50",
-          "size": "4rem",
-          "name": "XL"
-        },
-        {
-          "slug": "60",
-          "size": "6rem",
-          "name": "2XL"
-        }
+        { "slug": "10", "size": "8px", "name": "XS" },
+        { "slug": "20", "size": "16px", "name": "S" },
+        { "slug": "30", "size": "24px", "name": "M" },
+        { "slug": "40", "size": "32px", "name": "L" },
+        { "slug": "50", "size": "48px", "name": "XL" },
+        { "slug": "60", "size": "64px", "name": "2XL" }
       ]
     },
     "typography": {
-      "fluid": true,
+      "fluid": false,
+      "customFontSize": false,
+      "defaultFontSizes": false,
+      "dropCap": false,
       "fontFamilies": [
         {
-          "fontFamily": "Arial, Helvetica, sans-serif",
-          "slug": "sans",
-          "name": "Sans base"
+          "slug": "display",
+          "name": "Display (Anton)",
+          "fontFamily": "Anton, Impact, Haettenschweiler, 'Arial Narrow Bold', 'Roboto Condensed', sans-serif-condensed, sans-serif"
+        },
+        {
+          "slug": "ui",
+          "name": "UI (Archivo)",
+          "fontFamily": "Archivo, 'Helvetica Neue', Arial, sans-serif"
+        },
+        {
+          "slug": "nav",
+          "name": "Navegación (Jost)",
+          "fontFamily": "Jost, Futura, 'Century Gothic', 'Avenir Next', 'Trebuchet MS', sans-serif"
+        },
+        {
+          "slug": "body",
+          "name": "Texto (Work Sans)",
+          "fontFamily": "'Work Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
         }
       ],
       "fontSizes": [
-        {
-          "slug": "small",
-          "size": "0.875rem",
-          "name": "Small"
-        },
-        {
-          "slug": "medium",
-          "size": "1rem",
-          "name": "Base"
-        },
-        {
-          "slug": "large",
-          "size": "1.5rem",
-          "name": "Large"
-        },
-        {
-          "slug": "x-large",
-          "size": "clamp(2rem, 5vw, 4.5rem)",
-          "name": "Display"
-        }
+        { "slug": "small", "size": "0.875rem", "name": "Pequeño" },
+        { "slug": "medium", "size": "1rem", "name": "Base" },
+        { "slug": "large", "size": "clamp(1.6rem, 3vw, 2.2rem)", "name": "Título chico" },
+        { "slug": "x-large", "size": "clamp(2rem, 4vw, 3.2rem)", "name": "Título de sección" },
+        { "slug": "xx-large", "size": "clamp(2.2rem, 4.6vw, 4rem)", "name": "Título de evento" },
+        { "slug": "display", "size": "clamp(3rem, 7vw, 6rem)", "name": "Display" }
       ]
     }
   },
   "styles": {
     "color": {
-      "background": "var(--wp--preset--color--casa-paper)",
-      "text": "var(--wp--preset--color--casa-black)"
+      "background": "var(--wp--preset--color--paper)",
+      "text": "var(--wp--preset--color--ink)"
     },
     "typography": {
-      "fontFamily": "var(--wp--preset--font-family--sans)",
+      "fontFamily": "var(--wp--preset--font-family--body)",
+      "fontSize": "var(--wp--preset--font-size--medium)",
+      "fontWeight": "400",
       "lineHeight": "1.5"
     },
     "elements": {
       "heading": {
         "typography": {
+          "fontFamily": "var(--wp--preset--font-family--display)",
+          "fontWeight": "400",
+          "lineHeight": "0.95",
+          "textTransform": "uppercase"
+        }
+      },
+      "h1": {
+        "typography": { "fontSize": "var(--wp--preset--font-size--xx-large)" }
+      },
+      "h2": {
+        "typography": { "fontSize": "var(--wp--preset--font-size--x-large)" }
+      },
+      "h3": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--ui)",
+          "fontSize": "1.1875rem",
+          "fontWeight": "900",
+          "lineHeight": "1.12"
+        }
+      },
+      "h4": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--ui)",
+          "fontSize": "1rem",
+          "fontWeight": "900",
+          "lineHeight": "1.15"
+        }
+      },
+      "h5": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--ui)",
+          "fontSize": "0.875rem",
+          "fontWeight": "900",
+          "lineHeight": "1.15"
+        }
+      },
+      "h6": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--ui)",
+          "fontSize": "0.8125rem",
           "fontWeight": "800",
-          "lineHeight": "1.05"
+          "lineHeight": "1.15",
+          "letterSpacing": "0.08em"
         }
       },
       "link": {
-        "color": {
-          "text": "var(--wp--preset--color--casa-red)"
+        "color": { "text": "var(--wp--preset--color--red)" },
+        "typography": { "textDecoration": "underline" },
+        ":hover": {
+          "color": { "text": "var(--wp--preset--color--ink)" }
         }
       },
       "button": {
-        "border": {
-          "radius": "0"
-        },
+        "border": { "radius": "0", "width": "0" },
         "color": {
-          "background": "var(--wp--preset--color--casa-red)",
-          "text": "#FFFFFF"
+          "background": "var(--wp--preset--color--red)",
+          "text": "var(--wp--preset--color--white)"
+        },
+        "spacing": {
+          "padding": { "top": "16px", "right": "28px", "bottom": "16px", "left": "28px" }
         },
         "typography": {
-          "fontWeight": "800"
+          "fontFamily": "var(--wp--preset--font-family--ui)",
+          "fontSize": "0.84375rem",
+          "fontWeight": "900",
+          "letterSpacing": "0.03em",
+          "textTransform": "uppercase"
+        },
+        ":hover": {
+          "color": {
+            "background": "var(--wp--preset--color--red)",
+            "text": "var(--wp--preset--color--white)"
+          }
         }
       }
     }

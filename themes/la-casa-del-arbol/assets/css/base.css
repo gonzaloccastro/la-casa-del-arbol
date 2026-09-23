@@ -1,113 +1,473 @@
 /**
- * Base visual system — La Casa del Árbol
- * Primera versión. Ajustar tokens luego de validar el draft visual.
+ * La Casa del Árbol — CSS foundations (Design V1).
+ *
+ * Source of truth: docs/design/Final Design Handoff.md + Website Direction.dc.html.
+ * Loaded on the front end after Astra's main stylesheet, and in the block
+ * editor as an editor style.
+ *
+ * Breakpoints (Handoff §1.21). Custom properties can't be used in media
+ * queries, so these literal values are the contract:
+ *   mobile   max-width: 767px
+ *   tablet   768px – 1023px   (desktop layout + documented fluid fallbacks)
+ *   desktop  min-width: 1024px
+ *
+ * Contents
+ *   1. Tokens
+ *   2. Root and Astra resets
+ *   3. Typography
+ *   4. Links and focus
+ *   5. Layout primitives
+ *   6. Buttons (core/button + block style variations)
+ *   7. Motion
+ *   8. Legacy (pre-V1 classes, remove when their patterns are rebuilt)
  */
 
+/* ==========================================================================
+   1. Tokens
+   Colors and font stacks come from theme.json presets (single source of
+   truth); the hex fallbacks only apply if presets are missing.
+   ========================================================================== */
+
 :root {
-  --lcda-red: #EF3323;
-  --lcda-paper: #F4F2ED;
-  --lcda-mint: #B8DDBF;
-  --lcda-yellow: #F2C45E;
-  --lcda-black: #171717;
-  --lcda-border: 2px solid var(--lcda-red);
-  --lcda-content: 1200px;
+	/* Color (Handoff §1.1) */
+	--lcda-ink: var(--wp--preset--color--ink, #171717);
+	--lcda-paper: var(--wp--preset--color--paper, #fcfaf6);
+	--lcda-white: var(--wp--preset--color--white, #fff);
+	--lcda-red: var(--wp--preset--color--red, #ef3323);
+	--lcda-mint: var(--wp--preset--color--mint, #b8ddbf);
+	--lcda-yellow: var(--wp--preset--color--yellow, #f2c45e);
+	--lcda-placeholder: var(--wp--preset--color--placeholder, #e7e3d9);
+	--lcda-body-muted: var(--wp--preset--color--body-muted, #3a3a3a);
+	--lcda-body-soft: var(--wp--preset--color--body-soft, #5a5a5a);
+	--lcda-divider-on-dark: rgba(252, 250, 246, 0.2);
+	--lcda-divider-on-red: rgba(252, 250, 246, 0.35);
+
+	/* Type (Handoff §1.2) — fallback stacks until licensed files are added */
+	--lcda-font-display: var(--wp--preset--font-family--display, Impact, sans-serif);
+	--lcda-font-ui: var(--wp--preset--font-family--ui, Arial, sans-serif);
+	--lcda-font-nav: var(--wp--preset--font-family--nav, sans-serif);
+	--lcda-font-body: var(--wp--preset--font-family--body, system-ui, sans-serif);
+
+	/* Layout (Handoff §1.4) */
+	--lcda-max: 1440px;
+	--lcda-content-size: var(--wp--style--global--content-size, 760px);
+	--lcda-gutter: 32px;
+
+	/* Rules and borders (Handoff §1.5) — square corners, no shadows */
+	--lcda-rule: 2px solid var(--lcda-ink);
+	--lcda-rule-header: 3px solid var(--lcda-ink);
+	--lcda-rule-footer: 4px solid var(--lcda-red);
+	--lcda-rule-dashed: 1px dashed var(--lcda-ink);
+
+	/* Burst / star shape (Handoff §1.8) */
+	--lcda-burst: polygon(
+		50% 0%, 58% 14%, 70% 4%, 74% 20%, 89% 14%, 86% 31%,
+		100% 35%, 88% 47%, 98% 59%, 81% 63%, 85% 79%, 68% 74%,
+		60% 91%, 50% 78%, 40% 91%, 32% 74%, 15% 79%, 19% 63%,
+		2% 59%, 12% 47%, 0% 35%, 14% 31%, 11% 14%, 26% 20%,
+		30% 4%, 42% 14%
+	);
+
+	/* Sticky offset below the WordPress admin bar (logged-in users). Core
+	   defines --wp-admin--admin-bar--height only while the bar is shown. */
+	--lcda-sticky-top: var(--wp-admin--admin-bar--height, 0px);
+
+	/* Minimum touch target (Handoff §1.20) */
+	--lcda-hit-min: 44px;
 }
 
+@media (max-width: 767px) {
+	:root {
+		--lcda-gutter: 16px;
+	}
+}
+
+/* Below 600px the admin bar scrolls away with the page, so sticky elements
+   go back to the top edge. */
+@media (max-width: 600px) {
+	:root {
+		--lcda-sticky-top: 0px;
+	}
+}
+
+/* ==========================================================================
+   2. Root and Astra resets
+   Astra derives the root font size from its Customizer body size and
+   scales it down (x5.7%) on tablet/mobile. The handoff's rem values assume
+   a 16px root, so the root is pinned to the browser default. Selectors mirror
+   Astra's so equal specificity + later source order wins.
+   ========================================================================== */
+
 html {
-  scroll-behavior: smooth;
+	font-size: 100%;
 }
 
 body {
-  background: var(--lcda-paper);
-  color: var(--lcda-black);
+	background-color: var(--lcda-paper);
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-body);
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1.5;
+	letter-spacing: normal;
+	text-transform: none;
 }
 
-.site-content {
-  overflow: hidden;
+button,
+input,
+select,
+textarea {
+	font-family: inherit;
+	letter-spacing: normal;
+	text-transform: none;
 }
 
-.entry-content > .alignwide {
-  max-width: var(--lcda-content);
-  margin-inline: auto;
+img {
+	max-width: 100%;
+	height: auto;
 }
+
+/* Lienzo template (page-templates/canvas.php) ----------------------------- */
+
+/* clip (not hidden) blocks horizontal overflow from bursts and edge-bleed
+   scrollers without creating a scroll container, so sticky still works. */
+.lcda-canvas-page #page {
+	overflow-x: clip;
+}
+
+/* Astra's full-width layout already removes the container width; this keeps
+   it true even if a Customizer option adds padding back. */
+.lcda-canvas-page .site-content > .ast-container {
+	display: block;
+	max-width: none;
+	padding: 0;
+}
+
+.lcda-canvas {
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+/* Blocks added straight onto a Lienzo page get the editorial measure; wide
+   and full alignments break out. Designed sections are full-width groups. */
+.lcda-canvas__content > * {
+	box-sizing: border-box;
+	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-content-size));
+	margin-inline: auto;
+}
+
+.lcda-canvas__content > .alignwide {
+	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-max) - 2 * var(--lcda-gutter));
+}
+
+.lcda-canvas__content > .alignfull {
+	max-width: none;
+	margin-inline: 0;
+}
+
+/* ==========================================================================
+   3. Typography (Handoff §1.2)
+   Display (Anton): H1, H2. UI (Archivo 900): H3–H6. Component-specific
+   sizes live with each component; these are the global defaults.
+   ========================================================================== */
+
+h1, .entry-content :where(h1),
+h2, .entry-content :where(h2),
+h3, .entry-content :where(h3),
+h4, .entry-content :where(h4),
+h5, .entry-content :where(h5),
+h6, .entry-content :where(h6) {
+	color: inherit;
+	text-transform: uppercase;
+	letter-spacing: normal;
+}
+
+h1, .entry-content :where(h1),
+h2, .entry-content :where(h2) {
+	font-family: var(--lcda-font-display);
+	font-weight: 400;
+	line-height: 0.95;
+}
+
+h1, .entry-content :where(h1) {
+	font-size: var(--wp--preset--font-size--xx-large);
+}
+
+h2, .entry-content :where(h2) {
+	font-size: var(--wp--preset--font-size--x-large);
+}
+
+h3, .entry-content :where(h3),
+h4, .entry-content :where(h4),
+h5, .entry-content :where(h5),
+h6, .entry-content :where(h6) {
+	font-family: var(--lcda-font-ui);
+	font-weight: 900;
+	line-height: 1.15;
+}
+
+h3, .entry-content :where(h3) {
+	font-size: 1.1875rem;
+	line-height: 1.12;
+}
+
+h4, .entry-content :where(h4) {
+	font-size: 1rem;
+}
+
+h5, .entry-content :where(h5) {
+	font-size: 0.875rem;
+}
+
+h6, .entry-content :where(h6) {
+	font-size: 0.8125rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+}
+
+@media (max-width: 767px) {
+	h1, .entry-content :where(h1) {
+		font-size: 2.1rem;
+		line-height: 0.98;
+	}
+
+	h2, .entry-content :where(h2) {
+		font-size: 1.9rem;
+		line-height: 0.98;
+	}
+}
+
+/* Eyebrow: small red label above headings (Handoff §1.2). */
+.lcda-eyebrow {
+	margin: 0 0 8px;
+	color: var(--lcda-red);
+	font-family: var(--lcda-font-ui);
+	font-size: 0.8125rem;
+	font-weight: 800;
+	line-height: 1.2;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+/* Yellow eyebrow on red bands. */
+.lcda-eyebrow--on-red {
+	color: var(--lcda-yellow);
+}
+
+@media (max-width: 767px) {
+	.lcda-eyebrow {
+		font-size: 0.6875rem;
+	}
+}
+
+/* ==========================================================================
+   4. Links and focus
+   ========================================================================== */
+
+a {
+	color: var(--lcda-red);
+}
+
+a:hover {
+	color: var(--lcda-ink);
+}
+
+/* Keyboard focus indicator only (not visible on mouse/touch). Contexts
+   with dark or red backgrounds override the outline color. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+	outline: 2px solid var(--lcda-ink);
+	outline-offset: 2px;
+}
+
+/* ==========================================================================
+   5. Layout primitives
+   Apply as "Additional CSS class" on core/group blocks, or in templates.
+   ========================================================================== */
+
+/* Every section ends with a 2px ink rule (Handoff §1.5). */
+.lcda-section {
+	border-bottom: var(--lcda-rule);
+}
+
+/* 1440px centered content with the side gutter (Handoff §1.4). */
+.lcda-container {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: var(--lcda-max);
+	margin-inline: auto;
+	padding-inline: var(--lcda-gutter);
+}
+
+/* ==========================================================================
+   6. Buttons (Handoff §1.12)
+   Default core/button  = Primary (red).
+   is-style-lcda-dark      = Dark (ink).
+   is-style-lcda-outline   = Secondary (outline).
+   is-style-lcda-text-link = Text link.
+   Astra styles .wp-block-button .wp-block-button__link from its Customizer;
+   these selectors match or exceed that specificity and load later.
+   No hover motion or color change on buttons (V1 defines none).
+   ========================================================================== */
+
+.wp-block-button .wp-block-button__link,
+.wp-block-button .wp-block-button__link:hover,
+.wp-block-button .wp-block-button__link:focus {
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background-color: var(--lcda-red);
+	color: var(--lcda-white);
+	padding: 16px 28px;
+	font-family: var(--lcda-font-ui);
+	font-size: 0.84375rem;
+	font-weight: 900;
+	line-height: 1.2;
+	letter-spacing: 0.03em;
+	text-decoration: none;
+	text-transform: uppercase;
+	transform: none;
+}
+
+.wp-block-button.is-style-lcda-dark .wp-block-button__link,
+.wp-block-button.is-style-lcda-dark .wp-block-button__link:hover,
+.wp-block-button.is-style-lcda-dark .wp-block-button__link:focus {
+	border: 2px solid var(--lcda-ink);
+	background-color: var(--lcda-ink);
+	color: var(--lcda-white);
+	padding: 16px 32px;
+}
+
+.wp-block-button.is-style-lcda-outline .wp-block-button__link,
+.wp-block-button.is-style-lcda-outline .wp-block-button__link:hover,
+.wp-block-button.is-style-lcda-outline .wp-block-button__link:focus {
+	border: 2px solid var(--lcda-ink);
+	background-color: transparent;
+	color: var(--lcda-ink);
+	padding: 14px 28px;
+	font-weight: 800;
+}
+
+.wp-block-button.is-style-lcda-text-link .wp-block-button__link,
+.wp-block-button.is-style-lcda-text-link .wp-block-button__link:hover,
+.wp-block-button.is-style-lcda-text-link .wp-block-button__link:focus {
+	border: 0;
+	border-bottom: 2px solid var(--lcda-ink);
+	background-color: transparent;
+	color: var(--lcda-ink);
+	padding: 0 0 2px;
+	font-size: 0.8125rem;
+	font-weight: 800;
+}
+
+/* Mobile: action buttons go full width with centered text (Handoff §1.12).
+   Text links stay inline; add the class "lcda-inline" to a button block to
+   keep it inline (e.g. Instagram "Seguir"). */
+@media (max-width: 767px) {
+	.wp-block-buttons > .wp-block-button:not(.is-style-lcda-text-link):not(.lcda-inline) {
+		width: 100%;
+	}
+
+	.wp-block-buttons > .wp-block-button:not(.is-style-lcda-text-link):not(.lcda-inline) .wp-block-button__link {
+		display: block;
+		width: 100%;
+		box-sizing: border-box;
+		padding-inline: 16px;
+		text-align: center;
+	}
+}
+
+/* ==========================================================================
+   7. Motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ==========================================================================
+   8. Legacy (pre-V1)
+   Used by the original section-heading / whatsapp-cta patterns and possibly
+   by existing content. Kept unchanged (except the removed hover-lift) until
+   those patterns are rebuilt in Steps 3–4; then delete this block.
+   ========================================================================== */
 
 .lcda-kicker {
-  font-size: .85rem;
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+	font-size: 0.85rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
 }
 
 .lcda-display {
-  font-size: clamp(2.5rem, 8vw, 7rem);
-  line-height: .92;
-  font-weight: 900;
-  letter-spacing: -0.035em;
-  text-transform: uppercase;
+	font-size: clamp(2.5rem, 8vw, 7rem);
+	line-height: 0.92;
+	font-weight: 900;
+	letter-spacing: -0.035em;
+	text-transform: uppercase;
 }
 
 .lcda-panel {
-  border: var(--lcda-border);
-  padding: clamp(1.25rem, 3vw, 2.5rem);
-  background: var(--lcda-paper);
+	border: 2px solid var(--lcda-red);
+	padding: clamp(1.25rem, 3vw, 2.5rem);
+	background: var(--lcda-paper);
 }
 
 .lcda-panel--red {
-  background: var(--lcda-red);
-  color: #fff;
-  border-color: var(--lcda-red);
+	background: var(--lcda-red);
+	color: var(--lcda-white);
+	border-color: var(--lcda-red);
 }
 
-.lcda-button,
-.wp-block-button__link {
-  border-radius: 0 !important;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  transition: transform .15s ease, opacity .15s ease;
-}
-
-.lcda-button:hover,
-.wp-block-button__link:hover {
-  transform: translateY(-2px);
-  opacity: .92;
+.lcda-button {
+	border-radius: 0;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
 }
 
 .lcda-date-burst {
-  display: inline-grid;
-  place-items: center;
-  width: 4.75rem;
-  aspect-ratio: 1;
-  background: var(--lcda-mint);
-  color: var(--lcda-red);
-  font-size: 1.65rem;
-  font-weight: 900;
-  clip-path: polygon(
-    50% 0%, 58% 14%, 70% 4%, 74% 20%, 89% 14%, 86% 31%,
-    100% 35%, 88% 47%, 98% 59%, 81% 63%, 85% 79%, 68% 74%,
-    60% 91%, 50% 78%, 40% 91%, 32% 74%, 15% 79%, 19% 63%,
-    2% 59%, 12% 47%, 0% 35%, 14% 31%, 11% 14%, 26% 20%,
-    30% 4%, 42% 14%
-  );
+	display: inline-grid;
+	place-items: center;
+	width: 4.75rem;
+	aspect-ratio: 1;
+	background: var(--lcda-mint);
+	color: var(--lcda-red);
+	font-size: 1.65rem;
+	font-weight: 900;
+	clip-path: var(--lcda-burst);
 }
 
 .lcda-whatsapp-cta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: clamp(1.5rem, 4vw, 3rem);
-  background: var(--lcda-red);
-  color: var(--lcda-mint);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.5rem;
+	padding: clamp(1.5rem, 4vw, 3rem);
+	background: var(--lcda-red);
+	color: var(--lcda-mint);
 }
 
 .lcda-whatsapp-cta a {
-  color: inherit;
+	color: inherit;
 }
 
 @media (max-width: 768px) {
-  .lcda-display {
-    font-size: clamp(2.4rem, 15vw, 4.5rem);
-  }
+	.lcda-display {
+		font-size: clamp(2.4rem, 15vw, 4.5rem);
+	}
 }

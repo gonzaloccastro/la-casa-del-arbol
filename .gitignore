@@ -5,3 +5,6 @@ Thumbs.db
 *.log
 .env
 .env.*
+
+# Local AI development reports
+docs/claude-reports/
