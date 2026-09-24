@@ -98,23 +98,38 @@ LOCAL (Windows)                                   SERVER (read-only until step 5
                                                   c. SHA-256 must match; no absolute or ../
                                                      paths; no symlinks; file count must match
                                                   d. extract to staging; php -l every PHP file
-                                                     (if PHP CLI exists)
+                                                     (if PHP CLI exists), counted
                                                   ── nothing live has changed up to here ──
                                                   e. BACKUP live theme → tar.gz, verify entry
                                                      count == live file count
                                                   f. copy staging over the live theme
                                                      (overwrite and add, never delete)
                                                   g. verify every deployed file by SHA-256
+                                                     → prints LIVE-VERIFIED <id>
                                                   h. list remote files not in the release
                                                   i. remove this deployment's staging dir
+                                                  → prints RESULT: deploy OK <id>
 6  summary: commit, deployment id, backup path
 ```
+
+Before any of this, the script checks its own embedded remote script and refuses to run if it uses process substitution (see Server shell compatibility).
 
 **The remote script.** A bash script embedded in `deploy-theme.ps1`. It is sent base64-encoded inside the SSH command, so no script file is written to the server and Windows line endings can't corrupt it. It runs with `set -Eeuo pipefail`: any failed command stops it with a non-zero exit.
 
 **Package streaming.** The package goes over the same SSH connection as the script, on the connection's standard input, as base64 text. Windows PowerShell 5.1 can't pipe raw binary to a native program, so base64 is used, and the server drops any line breaks. The SSH command keeps that input open on file descriptor 3 (`exec 3<&0`), because the script itself arrives on bash's standard input. The password prompt reads the console, not standard input, so password authentication works unchanged. Any damage in transit (truncation, a changed byte) is caught by the SHA-256 check before anything is extracted.
 
 **Completion check.** Each remote run ends with an exact line, `[remote] RESULT: <verify|deploy> OK <id>`. The PowerShell script treats a run as successful only when ssh exits with 0 **and** this line appeared. A remote script that was cut short or never ran can't pass as a success.
+
+**LIVE-VERIFIED vs RESULT.** A deploy prints two markers:
+
+| Line | Printed when | Meaning |
+|---|---|---|
+| `[remote] LIVE-VERIFIED <id>` | right after step g | The live theme now holds exactly the release: every file was copied and passed its SHA-256 check. **Diagnostic only.** |
+| `[remote] RESULT: deploy OK <id>` | after the last step | The whole run succeeded, including the orphan report and staging cleanup. **The only success signal.** |
+
+LIVE-VERIFIED alone never counts as success: without the exact RESULT line (and ssh exit code 0) the run is reported as failed and the script exits 1. LIVE-VERIFIED only changes the failure message, so you know the live theme was already updated and verified (see Failure after LIVE-VERIFIED).
+
+**PHP lint.** Every `.php` file in the release is checked with `php -l` in staging, before the backup and before anything live changes. The check fails closed: the script counts the PHP files in the release and the files actually linted, and stops if the release has no PHP files, if the two counts differ, or if any file has a syntax error. On success it prints the count, for example `PHP lint OK: 13 files`. A lint step that silently checked nothing (what happened on 2026-09-23) is now a hard error. If the server has no PHP CLI, the lint is skipped and the log says so.
 
 **Why no scp.** Before 2026-09-23 the package went up with a separate scp connection, which meant three password logins per run. On the first real deployment, the server closed the third login (the deploy SSH) during authentication. The package had already been uploaded to `~`, so it was left behind. Streaming removes that connection and that leftover: if the deploy connection fails at login now, nothing at all has been written to the server.
 
@@ -125,7 +140,23 @@ LOCAL (Windows)                                   SERVER (read-only until step 5
 - Steps 5a–5d fail (stream damaged, checksum, unsafe paths, file count, PHP lint): the live theme was not touched. This run's staging dir `~/.lcda-deploy/<id>/` may remain (private, `700`). The next run reports it as stale.
 - Step 5e (backup) fails: the live theme was not touched.
 - Step 5f or 5g fails: the script prints the backup path for rollback and exits non-zero.
+- Step 5h or 5i fails (after `LIVE-VERIFIED`): see Failure after LIVE-VERIFIED.
 - Any failure makes the PowerShell script exit with code 1 and print `DEPLOY ABORTED` or the remote error.
+
+## Server shell compatibility (no process substitution)
+
+The production host's shell has no `/dev/fd`. Bash's process substitution, `<(command)` and `>(command)`, hands commands paths like `/dev/fd/63`, and on this host those paths don't exist. On 2026-09-23 this caused two failures in the remote script:
+
+- The PHP lint loop read its file list through process substitution. Its input could not be opened, so the loop never ran, and the step reported "PHP lint OK" without linting anything.
+- The orphan report ran `comm` on two process substitutions. `comm` could not open them and the script stopped after the verified copy, so the run was reported as failed even though the release was live and correct.
+
+Rules for the remote script:
+
+- **Never use process substitution.** Write intermediate lists as regular files in this deployment's private staging dir, `~/.lcda-deploy/<id>/` (next to `theme.tar`, never inside `theme/`, never in `/tmp`), then read those files. Today these are `package-entries.list` (the `tar` listing scanned for unsafe paths), `package-files.list`, `live-files.list` (for the orphan report) and `php-files.list` (for the lint).
+- **Don't pipe into an early-exiting reader inside a check.** With `pipefail`, `producer | grep -q` can make the check pass when it should fail (the producer is killed by SIGPIPE when `grep` stops at the first match). Write the producer's output to a staging file first, then scan the file.
+- **Checks must fail closed on their own.** Don't rely on `set -e` to catch a failed loop redirection; its handling differs between bash versions. Count what was checked.
+
+`deploy-theme.ps1` enforces the first rule: before anything else, it refuses to run (exit 1, no connection) if the embedded remote script contains `<(` or `>(`. Ordinary redirections (`<`, `>`, `<&3`, `2>&1`) and command substitution `$(...)` are not affected. Each run also prints the server's bash version (`[remote] Bash: ...`).
 
 ## Backup
 
@@ -201,11 +232,11 @@ Because nothing is deleted remotely, a file removed from the repository stays on
 Every run (verification and deploy) lists leftovers of earlier runs, read-only:
 
 - **Legacy upload files** in the home directory named exactly `lcda-deploy-YYYYMMDD-HHMMSS.tar`. The current workflow never creates them, so any you see come from the old scp-based workflow (for example the 2026-09-23 failed run).
-- **Stale staging directories** in `~/.lcda-deploy/` named exactly `YYYYMMDD-HHMMSS`, left by a run that failed before its cleanup step.
+- **Stale staging directories** in `~/.lcda-deploy/` named exactly `YYYYMMDD-HHMMSS`, left by a run that failed before its cleanup step. They hold that run's `theme.tar`, the extracted `theme/`, and whatever it had produced when it stopped: the `*.list` files and, after the copy, `manifest.sha256`. They are private (`700`) and kept on purpose for inspection. A successful run removes only its own staging dir, never another run's.
 
 The warning is informational. It never deletes anything and never blocks a deploy. Only regular files and real directories matching these exact names are listed; symlinks and other names are ignored, and a symlinked `~/.lcda-deploy` or `~/lcda-theme-backups` makes the script stop.
 
-**Cleanup is manual.** After reviewing the list, and only once a deployment has succeeded, delete the exact paths over SSH, without wildcards. For example:
+**Cleanup is manual and deliberate.** The script never deletes leftovers of other runs, even when they look obsolete. After reviewing the list, and only once a deployment has succeeded, delete the exact paths over SSH, without wildcards. For example:
 
 ```bash
 rm -- ~/lcda-deploy-20260923-175458.tar
@@ -217,9 +248,18 @@ rm -rf -- ~/.lcda-deploy/20260923-190000
 - **`Host key verification failed`:** the host key isn't trusted yet, or it changed. See prerequisite 3. Don't bypass it.
 - **"has uncommitted changes"**: commit or discard the changes in `themes/la-casa-del-arbol/`.
 - **"child theme directory not found" / "not the la-casa-del-arbol theme"**: the server doesn't look as expected. Stop and inspect it manually; don't change the script's paths to force a deploy.
-- **"PHP lint failed"**: a PHP file in the release has a syntax error. The live theme was not changed.
+- **"PHP lint failed"**: a PHP file in the release has a syntax error (the file is named above the error). The live theme was not changed.
+- **"PHP lint checked N of M files"** or **"package contains no PHP files"**: the lint could not check every PHP file. The live theme was not changed. Don't work around it; the staging dir holds `php-files.list` for inspection.
+- **"package contains unsafe paths"** / **"could not scan the package listing"**: the package listing has an absolute or `..` path, or couldn't be read. The live theme was not changed.
+- **`uses process substitution (line N)`** (local, before any connection): someone added `<(...)` or `>(...)` to the remote script. Rewrite it with a file in the staging dir (see Server shell compatibility).
 - **A failure after the backup step**: the output prints the backup path; follow Rollback.
 - **`ssh exited with code 255` and no `[remote]` lines**: the connection or login failed before the remote script started (wrong password, or the server refusing repeated logins). Nothing was changed. Wait a moment and run again.
 - **`transport check FAILED` / `package checksum mismatch`**: the package arrived damaged. Nothing live was changed. Run again; if it repeats, stop and investigate the connection.
 - **`the remote script did not report completion`**: ssh exited 0, but the remote script didn't finish (cut short, or didn't run). Treat the run as failed. Check the `[remote]` lines to see how far it got.
+- **Failure after LIVE-VERIFIED** (`DEPLOY ABORTED ... NOTE: the live theme WAS updated and passed per-file SHA-256 verification`): the copy finished and every deployed file matched the release, and then a later step failed (orphan report or staging cleanup). The run still counts as failed. Don't roll back blindly: the live theme is the intended release. Instead:
+  1. Read the `[remote] ERROR` lines to see which step failed. Lines tagged `(subshell)` come from a subshell; the untagged line is the one that stopped the script.
+  2. Do the post-deploy checks. If the site is fine, keep the release. Roll back only if the checks fail.
+  3. Optionally, read-only: `cd <RemoteThemeDir> && sha256sum --quiet -c ~/.lcda-deploy/<id>/manifest.sha256` confirms the live files still match the release.
+  4. Fix the failing step in the script, and have it reviewed. The staging dir stays until you remove it by hand.
+  This is what happened on 2026-09-23 (the orphan report failed; see Server shell compatibility), before these markers existed.
 - **Leftovers after a failure**: `~/.lcda-deploy/<id>/` may remain for inspection. It's private (`700`), outside `public_html`, and reported as stale by later runs. See Stale leftovers for the manual cleanup.

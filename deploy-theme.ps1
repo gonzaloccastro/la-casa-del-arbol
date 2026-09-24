@@ -31,10 +31,15 @@
       4. Confirmation: you must type DEPLOY.
       5. Remote deploy (SSH): the package is streamed over the connection
          straight into a private staging dir. Re-verify, check the
-         checksum, extract, PHP lint, create and verify a timestamped
-         backup of the live child theme, copy the files over the live theme
-         (overwrite, never delete), verify every deployed file by checksum,
-         report remote files not in the package (NOT deleted), clean staging.
+         checksum, extract, PHP lint (every file, counted), create and
+         verify a timestamped backup of the live child theme, copy the files
+         over the live theme (overwrite, never delete), verify every
+         deployed file by checksum (LIVE-VERIFIED), report remote files not
+         in the package (NOT deleted), clean staging.
+
+    The remote script must never use bash process substitution: the
+    production host has no /dev/fd. A local pre-flight check refuses to run
+    if it does. Intermediate lists are files in the staging dir.
 
     Credentials: none are stored here. SSH uses your existing authentication
     (key, agent or password prompt). The server's host key must already be in
@@ -144,9 +149,13 @@ fail() {
   exit 1
 }
 
+# With set -E the trap also runs in subshells ($(...), ( ... )). Those lines
+# are tagged: a subshell's failure only stops the script if the command that
+# started the subshell fails too, which prints its own untagged line.
 on_error() {
-  local code=$?
-  printf '[remote] ERROR: command failed (exit %s) near line %s\n' "$code" "${BASH_LINENO[0]}" >&2
+  local code=$? where=""
+  [ "${BASHPID:-$$}" = "$$" ] || where=" (subshell)"
+  printf '[remote] ERROR: command failed (exit %s) near line %s%s\n' "$code" "${BASH_LINENO[0]}" "$where" >&2
   rollback_hint
   exit "$code"
 }
@@ -188,6 +197,7 @@ report_target() {
   log "WordPress root:    $WP_ROOT (WordPress ${wp_version:-unknown})"
   log "Child theme:       $THEME_DIR (version $(header_value Version "$THEME_DIR/style.css"), $(find "$THEME_DIR" -type f | wc -l | tr -d ' ') files)"
   log "Astra parent:      $PARENT_DIR (version $(header_value Version "$PARENT_DIR/style.css"), read-only)"
+  log "Bash:              ${BASH_VERSION:-unknown}"
   if command -v php >/dev/null 2>&1; then
     log "PHP CLI:           $(php -r 'echo PHP_VERSION;' 2>/dev/null || echo unknown)"
   else
@@ -257,11 +267,29 @@ deploy() {
   chmod 700 "$STAGE_ROOT"
   mkdir "$stage"
   chmod 700 "$stage"
+  # Intermediate lists are regular files in this private staging dir, next
+  # to theme.tar and outside theme/. Never process substitution: the
+  # production host has no /dev/fd (see docs/deployment.md).
   local pkg="$stage/theme.tar"
+  local entries_list="$stage/package-entries.list"
+  local package_list="$stage/package-files.list"
+  local live_list="$stage/live-files.list"
+  local php_list="$stage/php-files.list"
   read_package > "$pkg" || fail "package stream could not be decoded (transfer interrupted?); the live theme was not changed"
   exec 3<&-
   [ "$(sha256sum "$pkg" | cut -d' ' -f1)" = "$PKG_SHA" ] || fail "package checksum mismatch (transfer corrupted?); the live theme was not changed"
-  if tar -tf "$pkg" | grep -Eq '^/|(^|/)\.\.(/|$)'; then fail "package contains unsafe paths"; fi
+
+  # Unsafe paths: list to a file first (a tar failure is fatal), then scan
+  # the file. grep status 1 = clean; 0 = unsafe path; anything else = error.
+  tar -tf "$pkg" > "$entries_list"
+  [ -s "$entries_list" ] || fail "package listing is empty; the live theme was not changed"
+  local scan=0
+  grep -Eq '^/|(^|/)\.\.(/|$)' "$entries_list" || scan=$?
+  case "$scan" in
+    0) fail "package contains unsafe paths; the live theme was not changed" ;;
+    1) ;;
+    *) fail "could not scan the package listing (grep exit $scan); the live theme was not changed" ;;
+  esac
 
   mkdir "$stage/theme"
   tar -xf "$pkg" -C "$stage/theme" --no-same-owner
@@ -271,16 +299,24 @@ deploy() {
   [ "$staged_count" = "$EXPECTED_FILES" ] || fail "package has $staged_count files, expected $EXPECTED_FILES"
   { [ -f "$stage/theme/style.css" ] && [ -f "$stage/theme/functions.php" ]; } || fail "package is missing style.css or functions.php"
   grep -Eq '^[[:space:]]*Template:[[:space:]]*astra[[:space:]]*$' "$stage/theme/style.css" || fail "package style.css is not an Astra child theme"
+  (cd "$stage/theme" && find . -type f) | sort > "$package_list"
   log "Package OK: $staged_count files, checksum verified"
 
-  # 2. PHP lint of the new code, before anything live changes.
+  # 2. PHP lint of the new code, before anything live changes. Fail-closed:
+  # the number of files actually linted must equal an independent count, so
+  # a loop that never ran can't pass as "no errors".
   if command -v php >/dev/null 2>&1; then
-    local bad=0 f
+    local php_expected linted=0 bad=0 f
+    find "$stage/theme" -type f -name '*.php' -print0 > "$php_list"
+    php_expected="$(find "$stage/theme" -type f -name '*.php' | wc -l | tr -d ' ')"
+    [ "$php_expected" -gt 0 ] || fail "package contains no PHP files; the live theme was not changed"
     while IFS= read -r -d '' f; do
+      linted=$((linted + 1))
       php -l "$f" >/dev/null 2>&1 || { log "PHP syntax error: ${f#"$stage/theme/"}"; bad=1; }
-    done < <(find "$stage/theme" -type f -name '*.php' -print0)
+    done < "$php_list"
+    [ "$linted" = "$php_expected" ] || fail "PHP lint checked $linted of $php_expected files; the live theme was not changed"
     [ "$bad" = 0 ] || fail "PHP lint failed; the live theme was not changed"
-    log "PHP lint OK"
+    log "PHP lint OK: $linted files"
   else
     log "PHP CLI not available: lint skipped"
   fi
@@ -306,10 +342,13 @@ deploy() {
   (cd "$THEME_DIR" && sha256sum --quiet -c "$stage/manifest.sha256") || fail "post-copy checksum verification failed"
   OVERLAY_STARTED=0
   log "Deployed and verified: $staged_count files"
+  # Diagnostic only, NOT success: success is the final RESULT line.
+  log "LIVE-VERIFIED $STAMP"
 
   # 6. Remote files that are not in the package: reported, never deleted.
   local orphans orphan_count
-  orphans="$(comm -23 <(cd "$THEME_DIR" && find . -type f | sort) <(cd "$stage/theme" && find . -type f | sort))"
+  (cd "$THEME_DIR" && find . -type f) | sort > "$live_list"
+  orphans="$(comm -23 "$live_list" "$package_list")"
   if [ -n "$orphans" ]; then
     orphan_count="$(printf '%s\n' "$orphans" | wc -l | tr -d ' ')"
     log "Remote files not in this release (kept, NOT deleted): $orphan_count"
@@ -389,15 +428,38 @@ function Get-RemoteCommand([string] $Encoded, [string[]] $ScriptArgs) {
 function Invoke-RemoteScript([string] $Target, [string] $Encoded, [string[]] $ScriptArgs, [string] $PackageBase64) {
     $sshArgs = (Get-SshArgs) + @($Target, (Get-RemoteCommand $Encoded $ScriptArgs))
     $resultLine = "[remote] RESULT: $($ScriptArgs[0]) OK $($ScriptArgs[1])"
+    $liveLine = "[remote] LIVE-VERIFIED $($ScriptArgs[1])"
     $completed = $false
+    $liveVerified = $false
     $PackageBase64 | & 'ssh' @sshArgs | ForEach-Object {
         Write-Host $_
         if ("$_" -ceq $resultLine) { $completed = $true }
+        if ("$_" -ceq $liveLine) { $liveVerified = $true }
+    }
+    # LIVE-VERIFIED is diagnostic only: it changes the failure message, never
+    # the outcome.
+    $note = ''
+    if ($liveVerified) {
+        $note = ' NOTE: the live theme WAS updated and passed per-file SHA-256 verification (LIVE-VERIFIED) before a later step failed. Do not roll back blindly; see docs/deployment.md, "Failure after LIVE-VERIFIED".'
     }
     if ($LASTEXITCODE -ne 0) {
-        Stop-Deploy "ssh exited with code $LASTEXITCODE (code 255 with no [remote] lines above: connection or authentication failed before the remote script started)"
+        Stop-Deploy "ssh exited with code $LASTEXITCODE (code 255 with no [remote] lines above: connection or authentication failed before the remote script started).$note"
     }
-    if (-not $completed) { Stop-Deploy 'the remote script did not report completion; treat this run as failed' }
+    if (-not $completed) { Stop-Deploy "the remote script did not report completion; treat this run as failed.$note" }
+}
+
+# The production host has no /dev/fd, so bash process substitution (the
+# "<(...)" and ">(...)" forms) fails there, and it can fail silently.
+# Refuse any remote script that uses it. Plain redirections (<, >, <&3,
+# 2>&1) and command substitution "$(...)" are not matched.
+function Assert-NoProcessSubstitution([string] $Script) {
+    $lineNo = 0
+    foreach ($line in ($Script -split "`n")) {
+        $lineNo++
+        if ($line -match '[<>]\(') {
+            Stop-Deploy "the remote script uses process substitution (line $lineNo), which fails on the production host (no /dev/fd). Use a file in the staging dir instead."
+        }
+    }
 }
 
 # Load and validate deploy.local.ps1.
@@ -474,6 +536,10 @@ try {
     if ($LocalOnly) { $mode = 'LOCAL ONLY (no network)' }
 
     Write-Host "La Casa del Arbol - child theme deployment [$mode]" -ForegroundColor White
+
+    Write-Step 'Checking the remote script'
+    Assert-NoProcessSubstitution $RemoteScriptTemplate
+    Write-Info 'No process substitution'
 
     # 0. Local configuration (read once, then read-only for the whole run) --
     Write-Step "Loading $ConfigFileName"
@@ -553,6 +619,7 @@ try {
     else {
         $remoteScript = $RemoteScriptTemplate.Replace('__REMOTE_HOME__', $RemoteHome).Replace('__WP_ROOT__', $RemoteWpRoot).Replace('__REMOTE_THEME_DIR__', $RemoteThemeDir).Replace('__THEME_SLUG__', $ThemeSlug)
         $remoteScript = $remoteScript -replace "`r`n", "`n"
+        Assert-NoProcessSubstitution $remoteScript
         $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($remoteScript))
         $packageBase64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($package))
         $scriptArgs = @($stamp, $packageSha, "$($headFiles.Count)")
