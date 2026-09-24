@@ -38,10 +38,11 @@ function lcda_register_pattern_categories() {
 add_action( 'init', 'lcda_register_pattern_categories' );
 
 /**
- * Button variants from the approved design (Final Design Handoff §1.12).
+ * Block style variations editors pick from the block sidebar.
  *
- * The default (unstyled) core button is the red Primary variant. Editors pick
- * the others from the block sidebar; visuals live in assets/css/base.css.
+ * Buttons (Final Design Handoff §1.12): the default (unstyled) core button is
+ * the red Primary variant; visuals live in assets/css/base.css. Paragraph
+ * "Sticker (estrella)": visuals in assets/css/components.css.
  */
 function lcda_register_block_styles() {
 	$button_styles = array(
@@ -59,5 +60,14 @@ function lcda_register_block_styles() {
 			)
 		);
 	}
+
+	// Star sticker for a short label such as "A la gorra" (Handoff §1.8).
+	register_block_style(
+		'core/paragraph',
+		array(
+			'name'  => 'lcda-sticker',
+			'label' => __( 'Sticker (estrella)', 'la-casa-del-arbol' ),
+		)
+	);
 }
 add_action( 'init', 'lcda_register_block_styles' );

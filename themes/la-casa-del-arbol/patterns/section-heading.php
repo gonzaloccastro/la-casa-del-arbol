@@ -1,23 +1,31 @@
 <?php
 /**
- * Title: Encabezado editorial
+ * Title: Encabezado de sección
  * Slug: la-casa-del-arbol/section-heading
  * Categories: lcda
+ * Keywords: encabezado, título, volanta, sección
+ * Description: Volanta roja + título + acción opcional a la derecha (en mobile va debajo). Si la sección no tiene acción, borrá el bloque Botones.
+ * Viewport Width: 1200
  * Inserter: yes
+ *
+ * @package LaCasaDelArbol
  */
+
 ?>
-<!-- wp:group {"className":"lcda-panel","layout":{"type":"constrained"}} -->
-<div class="wp-block-group lcda-panel">
-<!-- wp:paragraph {"className":"lcda-kicker"} -->
-<p class="lcda-kicker">La Casa del Árbol</p>
+<!-- wp:group {"className":"lcda-section-heading"} -->
+<div class="wp-block-group lcda-section-heading"><!-- wp:group {"className":"lcda-section-heading__text"} -->
+<div class="wp-block-group lcda-section-heading__text"><!-- wp:paragraph {"className":"lcda-eyebrow"} -->
+<p class="lcda-eyebrow">Volanta</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:heading {"level":2,"fontSize":"x-large"} -->
-<h2 class="wp-block-heading has-x-large-font-size">Título de sección</h2>
-<!-- /wp:heading -->
+<!-- wp:heading {"className":"lcda-section-heading__title"} -->
+<h2 class="wp-block-heading lcda-section-heading__title">Título de sección</h2>
+<!-- /wp:heading --></div>
+<!-- /wp:group -->
 
-<!-- wp:paragraph -->
-<p>Texto editable desde Gutenberg.</p>
-<!-- /wp:paragraph -->
-</div>
+<!-- wp:buttons {"className":"lcda-section-heading__action"} -->
+<div class="wp-block-buttons lcda-section-heading__action"><!-- wp:button {"className":"is-style-lcda-text-link"} -->
+<div class="wp-block-button is-style-lcda-text-link"><a class="wp-block-button__link wp-element-button">Ver más →</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
 <!-- /wp:group -->

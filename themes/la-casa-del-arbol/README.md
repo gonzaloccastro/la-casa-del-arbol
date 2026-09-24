@@ -23,17 +23,28 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - `inc/patterns.php` — categorías de patterns y variantes de estilo de botones.
 - `theme.json` — tokens: colores, tipografías, tamaños, espaciados, ancho 1440px.
 - `assets/css/base.css` — fundamentos visuales (tokens, resets de Astra, tipografía, botones).
+- `assets/css/components.css` — componentes compartidos: encabezado de sección, estrella de fecha y sticker,
+  sello, etiqueta de categoría, tarjeta de evento, grillas de eventos, afiche y metadata del evento.
 - `assets/css/chrome.css` + `assets/js/mobile-menu.js` — header, menú mobile y footer.
 - `assets/images/logo-*.svg` — logo canónico (símbolo y completo), tomado sin cambios de
   `docs/design/Website Direction.dc.html`; solo el relleno pasa a `currentColor`.
 - `template-parts/site/` — header, menú mobile (`<dialog>`) y footer.
 - `page-templates/canvas.php` — plantilla **La Casa — Lienzo** (full-bleed, sin título ni sidebar).
-- `patterns/` — patterns de Gutenberg.
+- `patterns/` — patterns de Gutenberg (`demo-*`: contenido de demostración temporal).
 
 ## Uso en WordPress
 - Páginas diseñadas (Home, Agenda, eventos de demo): Atributos de página → Plantilla → **La Casa — Lienzo**.
 - Botones: estilo por defecto = Primario rojo. Variantes en la barra lateral del bloque: Oscuro, Contorno, Enlace de texto.
   En mobile los botones pasan a ancho completo; agregar la clase `lcda-inline` para mantener uno en línea.
+- Patterns (Insertar → Patrones):
+  - **La Casa del Árbol → Encabezado de sección**: volanta + título + acción opcional (borrar el bloque
+    Botones si no hace falta).
+  - **La Casa del Árbol — Demo → Tarjeta de evento** (Destacada, Agenda, Relacionada): elegir el afiche,
+    reemplazar los textos de ejemplo y enlazar el título a la página del evento (toda la tarjeta queda
+    clickeable). Categoría amarilla: color de fondo Amarillo. El sello circular de la tarjeta de Agenda va
+    solo con "Entrada libre" o "A la gorra". Son contenido temporal hasta que exista `casa-eventos`.
+- Párrafo → estilo **Sticker (estrella)**: estrella menta con un texto corto (por ejemplo "A la gorra").
+- Los afiches se muestran completos, con su proporción original (nunca se recortan).
 
 ## Menús (Apariencia → Menús)
 El theme solo registra ubicaciones: no crea páginas, menús ni ítems. Una ubicación sin

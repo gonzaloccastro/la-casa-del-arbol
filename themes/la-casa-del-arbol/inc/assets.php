@@ -31,9 +31,11 @@ function lcda_asset_version( $relative_path ) {
  *
  * Neither Astra's style.css nor this theme's style.css holds any CSS (only
  * the theme header), so neither is enqueued. base.css loads after Astra's
- * main stylesheet so its resets win on equal specificity. The site chrome
- * (header, mobile menu, footer) is only rendered on Lienzo pages, so its
- * CSS and JS load only there.
+ * main stylesheet so its resets win on equal specificity. components.css
+ * (section heading, burst, tag, event card...) loads on every page, because
+ * editors can insert its patterns anywhere. The site chrome (header, mobile
+ * menu, footer) is only rendered on Lienzo pages, so its CSS and JS load
+ * only there.
  */
 function lcda_enqueue_assets() {
 	$deps = wp_style_is( 'astra-theme-css', 'registered' ) ? array( 'astra-theme-css' ) : array();
@@ -43,6 +45,13 @@ function lcda_enqueue_assets() {
 		LCDA_URI . '/assets/css/base.css',
 		$deps,
 		lcda_asset_version( 'assets/css/base.css' )
+	);
+
+	wp_enqueue_style(
+		'lcda-components',
+		LCDA_URI . '/assets/css/components.css',
+		array( 'lcda-base' ),
+		lcda_asset_version( 'assets/css/components.css' )
 	);
 
 	if ( lcda_is_canvas() ) {

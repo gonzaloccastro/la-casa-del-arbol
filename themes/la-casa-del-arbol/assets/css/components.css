@@ -1,0 +1,831 @@
+/**
+ * La Casa del Árbol — shared presentational components (Design V1, Step 3).
+ *
+ * Source of truth: docs/design/Final Design Handoff.md §1.8–1.15, §2.2, §3.2,
+ * §4 and Website Direction.dc.html. Markup contract (class names, required
+ * semantics, how core blocks and casa-eventos render the same components):
+ * docs/implementation/event-markup-contract.md.
+ *
+ * Tokens (colors, fonts, rules, burst polygon, gutter) come from base.css.
+ * Loaded on every front-end page and in the block editor.
+ *
+ * Rules
+ * - Style by lcda-* classes only, never by wp-block-* internals, so
+ *   core-block patterns and plugin PHP output look the same.
+ * - Selectors that reset the margins of a component's children start with
+ *   "body" (0,1,1): that beats core's layout margins
+ *   (":root :where(.is-layout-flow) > *", 0,1,0) and Astra's ".entry-content p"
+ *   (0,1,1, loaded earlier), in the editor as well.
+ * - Breakpoints: mobile max-width 767px · tablet 768–1023px · desktop 1024px+.
+ *
+ * Contents
+ *   1. Section heading
+ *   2. Date burst and sticker
+ *   3. Entrada stamp
+ *   4. Category tag
+ *   5. Event card
+ *   6. Event grids (featured · agenda · related)
+ *   7. Event detail poster
+ *   8. Event metadata
+ *   9. Event CTA row and back link
+ */
+
+/* ==========================================================================
+   1. Section heading (Handoff §5 SectionHeading)
+   Eyebrow + Anton H2 on the left, optional action on the right, aligned on
+   the first baseline. Mobile: stacked; the action goes below.
+   ========================================================================== */
+
+body .lcda-section-heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 0 32px;
+}
+
+body .lcda-section-heading > *,
+body .lcda-section-heading__text > * {
+	margin: 0;
+}
+
+body .lcda-section-heading__text > .lcda-eyebrow {
+	margin-bottom: 8px;
+}
+
+.lcda-section-heading__text {
+	min-width: 0;
+}
+
+.lcda-section-heading__title {
+	overflow-wrap: break-word;
+}
+
+@media (max-width: 767px) {
+	body .lcda-section-heading {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 16px;
+		margin-bottom: 18px;
+	}
+}
+
+/* ==========================================================================
+   2. Date burst and sticker (Handoff §1.8)
+   26-point star (--lcda-burst). The burst shows the day of the month; its
+   size comes from the context (card variant, detail) through
+   --lcda-burst-size / --lcda-burst-font. The sticker is the same shape with
+   a short uppercase label ("A la gorra"): class lcda-sticker, or the
+   "Sticker (estrella)" paragraph style in the editor.
+   ========================================================================== */
+
+.lcda-burst,
+.lcda-sticker,
+.is-style-lcda-sticker {
+	display: grid;
+	place-items: center;
+	box-sizing: border-box;
+	aspect-ratio: 1;
+	margin: 0;
+	background-color: var(--lcda-mint);
+	color: var(--lcda-red);
+	font-family: var(--lcda-font-ui);
+	font-weight: 900;
+	text-align: center;
+	clip-path: var(--lcda-burst);
+}
+
+.lcda-burst {
+	width: var(--lcda-burst-size, 54px);
+	padding: 0;
+	font-size: var(--lcda-burst-font, 18px);
+	line-height: 1;
+}
+
+.lcda-burst--mint {
+	background-color: var(--lcda-mint);
+}
+
+.lcda-burst--yellow {
+	background-color: var(--lcda-yellow);
+}
+
+body :is(.lcda-sticker, .is-style-lcda-sticker) {
+	width: 70px;
+	margin: 0;
+	padding: 10px;
+	font-size: 11px;
+	line-height: 1.15;
+	letter-spacing: normal;
+	text-transform: uppercase;
+	overflow-wrap: normal;
+}
+
+/* Corner placement (Festejá band): breaks the top edge on the right. The
+   host needs position: relative (class lcda-sticker-host). */
+.lcda-sticker-host {
+	position: relative;
+}
+
+body .lcda-sticker--corner {
+	position: absolute;
+	top: -18px;
+	right: 32px;
+	z-index: 1;
+}
+
+@media (max-width: 767px) {
+	body :is(.lcda-sticker, .is-style-lcda-sticker) {
+		width: 60px;
+		padding: 8px;
+		font-size: 9.5px;
+	}
+
+	body .lcda-sticker--corner {
+		top: -16px;
+		right: 16px;
+	}
+}
+
+/* ==========================================================================
+   3. Entrada stamp (Handoff §1.9)
+   Black rotated circle, only for "Entrada libre" / "A la gorra". The one
+   exception to "no border-radius".
+   ========================================================================== */
+
+.lcda-stamp {
+	display: grid;
+	place-items: center;
+	box-sizing: border-box;
+	width: 58px;
+	aspect-ratio: 1;
+	margin: 0;
+	padding: 6px;
+	border-radius: 50%;
+	background-color: var(--lcda-ink);
+	color: var(--lcda-white);
+	font-family: var(--lcda-font-ui);
+	font-size: 9.5px;
+	font-weight: 800;
+	line-height: 1.15;
+	text-align: center;
+	text-transform: uppercase;
+	transform: rotate(8deg);
+}
+
+@media (max-width: 767px) {
+	.lcda-stamp {
+		width: 50px;
+		padding: 5px;
+		font-size: 8.5px;
+		line-height: 1.1;
+	}
+}
+
+/* ==========================================================================
+   4. Category tag (Handoff §1.10)
+   Mint by default; lcda-tag--yellow for Música en vivo / Festival. In the
+   editor the color can also come from the block's background color (the
+   palette's Menta / Amarillo). ".has-background" is matched so core's
+   paragraph padding for colored paragraphs doesn't apply.
+   ========================================================================== */
+
+.lcda-tag,
+.lcda-tag.has-background {
+	display: inline-block;
+	width: fit-content;
+	margin: 0;
+	padding: 3px 7px;
+	background-color: var(--lcda-mint);
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 10px;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+
+.lcda-tag--mint {
+	background-color: var(--lcda-mint);
+}
+
+.lcda-tag--yellow {
+	background-color: var(--lcda-yellow);
+}
+
+.lcda-tag--large,
+.lcda-tag--large.has-background {
+	padding: 4px 10px;
+	font-size: 11px;
+}
+
+@media (max-width: 767px) {
+	.lcda-tag,
+	.lcda-tag.has-background {
+		padding: 3px 6px;
+		font-size: 9.5px;
+		letter-spacing: 0.02em;
+	}
+
+	.lcda-tag--large,
+	.lcda-tag--large.has-background {
+		padding: 4px 9px;
+		font-size: 10.5px;
+		letter-spacing: 0.03em;
+	}
+}
+
+/* ==========================================================================
+   5. Event card (Handoff §1.14, §1.15)
+   Variants: --featured (Home), --full (Agenda), --compact (Related).
+   The poster keeps its native ratio (the <img> width/height attributes): it
+   is never cropped. The title's link is stretched over the whole card, so
+   the card has exactly one link.
+   ========================================================================== */
+
+.lcda-event-card {
+	--lcda-burst-size: 54px;
+	--lcda-burst-font: 18px;
+	--lcda-burst-offset: 10px;
+	position: relative;
+	box-sizing: border-box;
+	min-width: 0;
+	border: var(--lcda-rule);
+	background-color: var(--lcda-white);
+	color: var(--lcda-ink);
+}
+
+.lcda-event-card--featured {
+	--lcda-burst-size: 52px;
+	--lcda-burst-font: 17px;
+}
+
+.lcda-event-card--compact {
+	--lcda-burst-size: 44px;
+	--lcda-burst-font: 14px;
+}
+
+body .lcda-event-card > * {
+	margin: 0;
+}
+
+/* Poster frame. Empty or still loading: #e7e3d9 fill; with no image at all
+   it keeps the V1 4:5 ratio so the layout doesn't collapse. */
+body :is(.lcda-event-card__poster, .lcda-event-detail__poster) {
+	position: relative;
+	/* Never stretched by a grid/flex parent: the frame's height is the
+	   poster's own height; its width is always the full column. */
+	align-self: start;
+	box-sizing: border-box;
+	width: 100%;
+	margin: 0;
+	background-color: var(--lcda-placeholder);
+}
+
+.lcda-event-card__poster {
+	overflow: hidden;
+}
+
+body :is(.lcda-event-card__poster, .lcda-event-detail__poster) > * {
+	margin: 0;
+}
+
+:is(.lcda-event-card__poster, .lcda-event-detail__poster) img {
+	display: block;
+	width: 100%;
+	max-width: none;
+	height: auto;
+}
+
+:is(.lcda-event-card__poster, .lcda-event-detail__poster) img:is(:not([src]), [src=""]) {
+	display: none;
+}
+
+:is(.lcda-event-card__poster, .lcda-event-detail__poster):not(:has(img[src]:not([src=""]))) {
+	aspect-ratio: 4 / 5;
+}
+
+body .lcda-event-card__burst {
+	position: absolute;
+	top: var(--lcda-burst-offset);
+	left: var(--lcda-burst-offset);
+}
+
+body .lcda-event-card__stamp {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+}
+
+/* Body */
+.lcda-event-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	padding: 16px 18px 18px;
+	overflow-wrap: anywhere;
+}
+
+body .lcda-event-card__body > *,
+body .lcda-event-card__header > * {
+	margin: 0;
+}
+
+body .lcda-event-card__body > :empty {
+	display: none;
+}
+
+.lcda-event-card--featured .lcda-event-card__body {
+	gap: 8px;
+	padding: 14px 16px 16px;
+}
+
+.lcda-event-card--compact .lcda-event-card__body {
+	gap: 6px;
+	padding: 14px 16px;
+}
+
+/* Meta row: "WEEKDAY · HH:MM" left, tag right. */
+.lcda-event-card__header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.lcda-event-card__meta {
+	font-family: var(--lcda-font-ui);
+	font-size: 11.5px;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	opacity: 0.6;
+}
+
+.lcda-event-card--featured .lcda-event-card__meta {
+	font-size: 11px;
+}
+
+.lcda-event-card--compact .lcda-event-card__meta {
+	font-size: 10.5px;
+}
+
+/* Title (a heading; its level depends on the page outline). */
+body .lcda-event-card__title {
+	margin: 0;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 19px;
+	font-weight: 900;
+	line-height: 1.12;
+	letter-spacing: normal;
+	text-transform: uppercase;
+}
+
+body .lcda-event-card--featured .lcda-event-card__title {
+	font-size: 16px;
+	line-height: 1.15;
+}
+
+body .lcda-event-card--compact .lcda-event-card__title {
+	font-size: 15px;
+	line-height: 1.15;
+}
+
+:is(.lcda-event-card__link, .lcda-event-card__title a),
+:is(.lcda-event-card__link, .lcda-event-card__title a):hover,
+:is(.lcda-event-card__link, .lcda-event-card__title a):focus {
+	color: inherit;
+	text-decoration: none;
+}
+
+/* Stretched link: the whole card is the hit area. */
+:is(.lcda-event-card__link, .lcda-event-card__title a)::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+}
+
+/* Block editor only (.block-editor-block-list__layout never exists on the
+   front end): no stretched link, so the poster and texts stay clickable
+   for editing. */
+.block-editor-block-list__layout :is(.lcda-event-card__link, .lcda-event-card__title a)::after {
+	content: none;
+}
+
+/* Keyboard focus outlines the whole card instead of the title text. */
+@supports selector(:has(*)) {
+	.lcda-event-card:has(:is(.lcda-event-card__link, .lcda-event-card__title a):focus-visible) {
+		outline: 2px solid var(--lcda-ink);
+		outline-offset: 2px;
+	}
+
+	:is(.lcda-event-card__link, .lcda-event-card__title a):focus-visible {
+		outline: none;
+	}
+}
+
+body .lcda-event-card__subtitle {
+	color: var(--lcda-body-muted);
+	font-family: var(--lcda-font-body);
+	font-size: 13.5px;
+	line-height: 1.5;
+}
+
+/* Footer: venue (Agenda) + entrada, above a dashed rule. */
+.lcda-event-card__footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 4px 8px;
+	padding-top: 10px;
+	border-top: var(--lcda-rule-dashed);
+	font-family: var(--lcda-font-ui);
+	font-size: 11px;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+body .lcda-event-card__footer > * {
+	margin: 0;
+}
+
+body .lcda-event-card--full .lcda-event-card__footer {
+	margin-top: 4px;
+}
+
+.lcda-event-card__venue {
+	opacity: 0.6;
+}
+
+.lcda-event-card__entrada {
+	color: var(--lcda-red);
+}
+
+/* Featured cards sit in a row: equal heights, footer pinned to the bottom. */
+.lcda-event-card--featured {
+	display: flex;
+	flex-direction: column;
+}
+
+.lcda-event-card--featured .lcda-event-card__body {
+	flex: 1;
+}
+
+body .lcda-event-card--featured .lcda-event-card__footer {
+	margin-top: auto;
+}
+
+@media (max-width: 767px) {
+	.lcda-event-card {
+		--lcda-burst-size: 48px;
+		--lcda-burst-font: 15px;
+		--lcda-burst-offset: 8px;
+	}
+
+	.lcda-event-card--featured {
+		--lcda-burst-size: 44px;
+		--lcda-burst-font: 14px;
+	}
+
+	.lcda-event-card--compact {
+		--lcda-burst-size: 38px;
+		--lcda-burst-font: 12px;
+	}
+
+	body .lcda-event-card__stamp {
+		right: 8px;
+		bottom: 8px;
+	}
+
+	.lcda-event-card__body {
+		gap: 8px;
+		padding: 14px 16px 16px;
+	}
+
+	.lcda-event-card--featured .lcda-event-card__body {
+		gap: 6px;
+		padding: 12px 14px 14px;
+	}
+
+	.lcda-event-card--compact .lcda-event-card__body {
+		gap: 5px;
+		padding: 12px 14px;
+	}
+
+	.lcda-event-card__meta {
+		font-size: 10.5px;
+		letter-spacing: 0.03em;
+	}
+
+	.lcda-event-card--featured .lcda-event-card__meta,
+	.lcda-event-card--compact .lcda-event-card__meta {
+		font-size: 10px;
+	}
+
+	body .lcda-event-card__title {
+		font-size: 17px;
+	}
+
+	body .lcda-event-card--featured .lcda-event-card__title {
+		font-size: 14.5px;
+	}
+
+	body .lcda-event-card--compact .lcda-event-card__title {
+		font-size: 13.5px;
+	}
+
+	body .lcda-event-card__subtitle {
+		font-size: 13px;
+	}
+
+	.lcda-event-card__footer {
+		padding-top: 9px;
+		font-size: 10.5px;
+	}
+
+	body .lcda-event-card--full .lcda-event-card__footer {
+		margin-top: 2px;
+	}
+
+	.lcda-event-card--featured .lcda-event-card__footer {
+		padding-top: 8px;
+	}
+}
+
+/* ==========================================================================
+   6. Event grids (Handoff §1.21, §2.2, §3.2, §4.2)
+   --featured: 4 cols → tablet 2 → mobile snap scroller (card 68%)
+   --agenda:   3-col masonry (CSS columns) → tablet 2 → mobile 1-col feed
+   --related:  3 cols → tablet 2 → mobile snap scroller (card 62%)
+   Burst colors alternate by position: 1st mint, 2nd yellow, 3rd mint...
+   ========================================================================== */
+
+body .lcda-event-grid > * {
+	margin: 0;
+}
+
+.lcda-event-grid > :nth-child(even) .lcda-event-card__burst {
+	background-color: var(--lcda-yellow);
+}
+
+.lcda-event-grid--featured,
+.lcda-event-grid--related {
+	display: grid;
+	gap: 24px;
+}
+
+.lcda-event-grid--featured {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lcda-event-grid--related {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Masonry: cards keep their natural height (native poster ratio + text). */
+.lcda-event-grid--agenda {
+	column-count: 3;
+	column-gap: 24px;
+}
+
+body .lcda-event-grid--agenda > * {
+	margin: 0 0 24px;
+	break-inside: avoid;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+	.lcda-event-grid--featured,
+	.lcda-event-grid--related {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.lcda-event-grid--agenda {
+		column-count: 2;
+	}
+}
+
+@media (max-width: 767px) {
+	/* Edge-bleed scroller: the first card lines up with the gutter and the
+	   row scrolls to the viewport edges (Handoff §1.4). */
+	.lcda-event-grid--featured,
+	.lcda-event-grid--related {
+		display: flex;
+		gap: 14px;
+		margin-inline: calc(-1 * var(--lcda-gutter));
+		padding: 0 var(--lcda-gutter) 6px;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		scroll-snap-type: x mandatory;
+		scroll-padding-inline: var(--lcda-gutter);
+	}
+
+	.lcda-event-grid--featured > *,
+	.lcda-event-grid--related > * {
+		scroll-snap-align: start;
+	}
+
+	.lcda-event-grid--featured > * {
+		flex: 0 0 68%;
+	}
+
+	.lcda-event-grid--related > * {
+		flex: 0 0 62%;
+	}
+
+	.lcda-event-grid--agenda {
+		column-count: 1;
+	}
+
+	body .lcda-event-grid--agenda > * {
+		margin-bottom: 22px;
+	}
+
+	body .lcda-event-grid--agenda > :last-child {
+		margin-bottom: 0;
+	}
+}
+
+/* ==========================================================================
+   7. Event detail poster (Handoff §4.1)
+   Native-ratio poster in a 2px ink frame; the burst (always mint) breaks
+   out of the top-left corner. The two-column detail layout is Step 6.
+   ========================================================================== */
+
+.lcda-event-detail__poster {
+	border: var(--lcda-rule);
+}
+
+body .lcda-event-detail__burst {
+	--lcda-burst-size: 74px;
+	--lcda-burst-font: 24px;
+	position: absolute;
+	/* -14px from the frame's outer edge; offsets start inside the 2px border. */
+	top: -16px;
+	left: -16px;
+	z-index: 1;
+	background-color: var(--lcda-mint);
+}
+
+@media (max-width: 767px) {
+	body .lcda-event-detail__burst {
+		--lcda-burst-size: 58px;
+		--lcda-burst-font: 18px;
+		top: -14px;
+		left: -14px;
+	}
+}
+
+/* ==========================================================================
+   8. Event metadata (Handoff §4.1): Cuándo / Dónde / Entrada
+   Desktop and tablet: equal columns between 2px rules, dashed dividers.
+   Mobile: label/value rows. Works for any number of items (a missing item
+   leaves no empty column). Plugin output should be a <dl> with one
+   lcda-event-meta__item <div> per <dt>/<dd> pair.
+   ========================================================================== */
+
+.lcda-event-meta {
+	display: grid;
+	grid-auto-columns: minmax(0, 1fr);
+	grid-auto-flow: column;
+	margin: 0;
+	padding: 0;
+	border-top: var(--lcda-rule);
+	border-bottom: var(--lcda-rule);
+}
+
+body .lcda-event-meta > * {
+	margin: 0;
+}
+
+.lcda-event-meta__item {
+	padding: 16px 18px;
+	border-right: var(--lcda-rule-dashed);
+	overflow-wrap: break-word;
+}
+
+.lcda-event-meta__item:last-child {
+	border-right: 0;
+}
+
+body .lcda-event-meta__item > * {
+	margin: 0;
+}
+
+.lcda-event-meta__label {
+	margin-bottom: 6px;
+	color: var(--lcda-red);
+	font-family: var(--lcda-font-ui);
+	font-size: 10.5px;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+body .lcda-event-meta__item > .lcda-event-meta__label {
+	margin-bottom: 6px;
+}
+
+.lcda-event-meta__value {
+	font-family: var(--lcda-font-ui);
+	font-size: 14px;
+	font-weight: 900;
+	line-height: 1.3;
+	text-transform: uppercase;
+}
+
+@media (max-width: 767px) {
+	.lcda-event-meta {
+		grid-auto-flow: row;
+	}
+
+	.lcda-event-meta__item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 13px 2px;
+		border-right: 0;
+		border-bottom: var(--lcda-rule-dashed);
+	}
+
+	.lcda-event-meta__item:last-child {
+		border-bottom: 0;
+	}
+
+	body .lcda-event-meta__item > .lcda-event-meta__label {
+		margin-bottom: 0;
+		font-size: 10px;
+		white-space: nowrap;
+	}
+
+	.lcda-event-meta__value {
+		font-size: 12.5px;
+		text-align: right;
+	}
+}
+
+/* ==========================================================================
+   9. Event CTA row and back link (Handoff §1.12, §4.1)
+   CTA row: primary (Comprar entradas / Reservar) + outline Compartir, gap
+   14px, wraps; mobile: stacked full width, gap 10px. Works with core/buttons
+   (class on the Buttons block) and with plugin links (.lcda-btn).
+   Back link: "← Volver a la agenda", text link without rule.
+   ========================================================================== */
+
+body .lcda-event-cta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin: 0;
+}
+
+@media (max-width: 767px) {
+	body .lcda-event-cta {
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.lcda-event-cta > :is(a, button).lcda-btn {
+		display: block;
+		width: 100%;
+		padding-inline: 16px;
+	}
+}
+
+:is(a.lcda-back-link, .lcda-back-link a),
+:is(a.lcda-back-link, .lcda-back-link a):hover,
+:is(a.lcda-back-link, .lcda-back-link a):focus {
+	position: relative;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+
+/* Hit area at least 44px tall without changing the look (Handoff §1.20). */
+:is(a.lcda-back-link, .lcda-back-link a)::after {
+	content: "";
+	position: absolute;
+	inset: -16px -6px;
+}
+
+@media (max-width: 767px) {
+	:is(a.lcda-back-link, .lcda-back-link a),
+	:is(a.lcda-back-link, .lcda-back-link a):hover,
+	:is(a.lcda-back-link, .lcda-back-link a):focus {
+		font-size: 11.5px;
+	}
+}

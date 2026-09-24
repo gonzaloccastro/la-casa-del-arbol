@@ -299,20 +299,33 @@ a:hover {
 	padding-inline: var(--lcda-gutter);
 }
 
+/* Desktop-only element, e.g. the "Ver agenda completa →" link that the
+   mobile Home drops (Handoff §2.2). */
+@media (max-width: 767px) {
+	.lcda-hide-on-mobile {
+		display: none !important;
+	}
+}
+
 /* ==========================================================================
    6. Buttons (Handoff §1.12)
-   Default core/button  = Primary (red).
-   is-style-lcda-dark      = Dark (ink).
-   is-style-lcda-outline   = Secondary (outline).
-   is-style-lcda-text-link = Text link.
+   Two ways in, one set of rules:
+   - Editors: core/button. Default = Primary (red); block styles in the
+     sidebar: is-style-lcda-dark, is-style-lcda-outline, is-style-lcda-text-link.
+   - Templates / casa-eventos: a link or button with class "lcda-btn", plus
+     lcda-btn--dark, lcda-btn--outline or lcda-btn--text.
    Astra styles .wp-block-button .wp-block-button__link from its Customizer;
-   these selectors match or exceed that specificity and load later.
+   these selectors match or exceed that specificity and load later. The
+   :is(a, button) prefix keeps .lcda-btn above Astra's "a" rules.
    No hover motion or color change on buttons (V1 defines none).
    ========================================================================== */
 
 .wp-block-button .wp-block-button__link,
 .wp-block-button .wp-block-button__link:hover,
-.wp-block-button .wp-block-button__link:focus {
+.wp-block-button .wp-block-button__link:focus,
+:is(a, button).lcda-btn,
+:is(a, button).lcda-btn:hover,
+:is(a, button).lcda-btn:focus {
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
@@ -329,9 +342,20 @@ a:hover {
 	transform: none;
 }
 
+/* Template/plugin buttons: box model that core/button gets from its block CSS. */
+:is(a, button).lcda-btn {
+	display: inline-block;
+	box-sizing: border-box;
+	cursor: pointer;
+	text-align: center;
+}
+
 .wp-block-button.is-style-lcda-dark .wp-block-button__link,
 .wp-block-button.is-style-lcda-dark .wp-block-button__link:hover,
-.wp-block-button.is-style-lcda-dark .wp-block-button__link:focus {
+.wp-block-button.is-style-lcda-dark .wp-block-button__link:focus,
+:is(a, button).lcda-btn--dark,
+:is(a, button).lcda-btn--dark:hover,
+:is(a, button).lcda-btn--dark:focus {
 	border: 2px solid var(--lcda-ink);
 	background-color: var(--lcda-ink);
 	color: var(--lcda-white);
@@ -340,7 +364,10 @@ a:hover {
 
 .wp-block-button.is-style-lcda-outline .wp-block-button__link,
 .wp-block-button.is-style-lcda-outline .wp-block-button__link:hover,
-.wp-block-button.is-style-lcda-outline .wp-block-button__link:focus {
+.wp-block-button.is-style-lcda-outline .wp-block-button__link:focus,
+:is(a, button).lcda-btn--outline,
+:is(a, button).lcda-btn--outline:hover,
+:is(a, button).lcda-btn--outline:focus {
 	border: 2px solid var(--lcda-ink);
 	background-color: transparent;
 	color: var(--lcda-ink);
@@ -350,7 +377,10 @@ a:hover {
 
 .wp-block-button.is-style-lcda-text-link .wp-block-button__link,
 .wp-block-button.is-style-lcda-text-link .wp-block-button__link:hover,
-.wp-block-button.is-style-lcda-text-link .wp-block-button__link:focus {
+.wp-block-button.is-style-lcda-text-link .wp-block-button__link:focus,
+:is(a, button).lcda-btn--text,
+:is(a, button).lcda-btn--text:hover,
+:is(a, button).lcda-btn--text:focus {
 	border: 0;
 	border-bottom: 2px solid var(--lcda-ink);
 	background-color: transparent;
@@ -358,6 +388,20 @@ a:hover {
 	padding: 0 0 2px;
 	font-size: 0.8125rem;
 	font-weight: 800;
+}
+
+/* Text links are about 18px tall: an invisible extension brings the hit
+   area to about 46px without changing the look (Handoff §1.20). */
+.wp-block-button.is-style-lcda-text-link .wp-block-button__link,
+:is(a, button).lcda-btn--text {
+	position: relative;
+}
+
+.wp-block-button.is-style-lcda-text-link .wp-block-button__link::after,
+:is(a, button).lcda-btn--text::after {
+	content: "";
+	position: absolute;
+	inset: -14px -6px;
 }
 
 /* Mobile: action buttons go full width with centered text (Handoff §1.12).
