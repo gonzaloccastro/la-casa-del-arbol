@@ -48,10 +48,29 @@
 	--lcda-font-nav: var(--wp--preset--font-family--nav, sans-serif);
 	--lcda-font-body: var(--wp--preset--font-family--body, system-ui, sans-serif);
 
-	/* Layout (Handoff §1.4) */
+	/* Layout (Handoff §1.4) — see docs/implementation/layout-contract.md
+	   Container = 1440px including the gutters, so its content column is
+	   1376px: the same width as theme.json "wideSize" (alignwide). Reading
+	   measure = theme.json "contentSize" (760px). */
 	--lcda-max: 1440px;
 	--lcda-content-size: var(--wp--style--global--content-size, 760px);
+	--lcda-wide-size: var(--wp--style--global--wide-size, 1376px);
 	--lcda-gutter: 32px;
+
+	/* Spacing scale (Handoff §1.3). The theme.json spacing presets 10–60 point
+	   at these, so editor choices and component CSS share one scale. 40–60
+	   step down at the mobile breakpoint, exactly as the approved screens do. */
+	--lcda-space-10: 8px;
+	--lcda-space-20: 16px;
+	--lcda-space-30: 24px;   /* card grid gap */
+	--lcda-space-40: 32px;   /* heading → content: 32 / 18 */
+	--lcda-space-50: 48px;   /* 48 / 32 */
+	--lcda-space-60: 64px;   /* content section: 64 / 40 */
+
+	/* Section rhythm (Handoff §1.3). */
+	--lcda-section-space-top: var(--lcda-space-60);     /* 64 / 36 */
+	--lcda-section-space-bottom: var(--lcda-space-60);  /* 64 / 40 */
+	--lcda-band-space: 56px;                            /* 56 / 40 */
 
 	/* Rules and borders (Handoff §1.5) — square corners, no shadows */
 	--lcda-rule: 2px solid var(--lcda-ink);
@@ -79,6 +98,11 @@
 @media (max-width: 767px) {
 	:root {
 		--lcda-gutter: 16px;
+		--lcda-space-40: 18px;
+		--lcda-space-50: 32px;
+		--lcda-space-60: 40px;
+		--lcda-section-space-top: 36px;
+		--lcda-band-space: 40px;
 	}
 }
 
@@ -149,8 +173,13 @@ img {
 	padding: 0;
 }
 
-/* Blocks added straight onto a Lienzo page get the editorial measure; wide
-   and full alignments break out. Designed sections are full-width groups. */
+/* Top level of a Lienzo page (layout contract, same widths as the editor):
+   - default blocks: reading measure (760px), centered, gutters kept;
+   - alignwide: the container column (1376px), lined up with every
+     lcda-container, so headings, grids and sections share one left edge;
+   - alignfull and lcda-section: full bleed.
+   Components only set margin-block, never margin-inline, so they don't
+   undo this centering. */
 .lcda-canvas__content > * {
 	box-sizing: border-box;
 	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-content-size));
@@ -158,12 +187,23 @@ img {
 }
 
 .lcda-canvas__content > .alignwide {
-	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-max) - 2 * var(--lcda-gutter));
+	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-wide-size));
 }
 
-.lcda-canvas__content > .alignfull {
+.lcda-canvas__content > :is(.alignfull, .lcda-section) {
 	max-width: none;
 	margin-inline: 0;
+}
+
+/* Block editor: the root column gets the same gutters, so wide blocks line
+   up with sections at any canvas width (WordPress's own constrained layout
+   has no gutters). These classes exist only in the editor. */
+.block-editor-block-list__layout.is-root-container > :not(.alignfull, .alignleft, .alignright) {
+	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-content-size));
+}
+
+.block-editor-block-list__layout.is-root-container > .alignwide {
+	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-wide-size));
 }
 
 /* ==========================================================================
@@ -285,18 +325,44 @@ a:hover {
    Apply as "Additional CSS class" on core/group blocks, or in templates.
    ========================================================================== */
 
-/* Every section ends with a 2px ink rule (Handoff §1.5). */
+/* Section: full-bleed band that ends with a 2px ink rule (Handoff §1.5) and
+   carries the vertical rhythm (§1.3), so editors never set section padding
+   by hand. Holds an lcda-container. Background color, if any, comes from
+   the block's color setting.
+   --band:  colored bands (Festejá, newsletter): 56 / 40.
+   --flush: no padding (sections whose content sets its own, e.g. the hero).
+   A block padding chosen in the editor (spacing presets) still overrides. */
 .lcda-section {
+	box-sizing: border-box;
+	margin-block: 0;
+	/* Side padding stays 0 even with a background color (core pads colored
+	   groups): the lcda-container inside provides the gutter. */
+	padding: var(--lcda-section-space-top) 0 var(--lcda-section-space-bottom);
 	border-bottom: var(--lcda-rule);
 }
 
-/* 1440px centered content with the side gutter (Handoff §1.4). */
+.lcda-section--band {
+	padding-block: var(--lcda-band-space);
+}
+
+.lcda-section--flush {
+	padding-block: 0;
+}
+
+/* 1440px centered content with the side gutter (Handoff §1.4). Also used by
+   the header (template-parts/site/header.php). */
 .lcda-container {
 	box-sizing: border-box;
 	width: 100%;
 	max-width: var(--lcda-max);
 	margin-inline: auto;
 	padding-inline: var(--lcda-gutter);
+}
+
+/* Reading measure for running text inside a container (760px, left-aligned
+   with the section heading). */
+.lcda-reading {
+	max-width: var(--lcda-content-size);
 }
 
 /* Desktop-only element, e.g. the "Ver agenda completa →" link that the

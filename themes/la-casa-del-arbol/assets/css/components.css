@@ -16,6 +16,10 @@
  *   "body" (0,1,1): that beats core's layout margins
  *   (":root :where(.is-layout-flow) > *", 0,1,0) and Astra's ".entry-content p"
  *   (0,1,1, loaded earlier), in the editor as well.
+ * - A component's outer element sets margin-block only, never margin-inline
+ *   or the margin shorthand: horizontal placement belongs to the layout
+ *   contract (docs/implementation/layout-contract.md). Spacing values come
+ *   from the --lcda-space-* scale where the design uses one.
  * - Breakpoints: mobile max-width 767px · tablet 768–1023px · desktop 1024px+.
  *
  * Contents
@@ -42,7 +46,13 @@ body .lcda-section-heading {
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 12px;
-	margin: 0 0 32px;
+	margin-block: 0 var(--lcda-space-40);
+}
+
+/* Whatever follows the heading inside a section starts right after its
+   bottom margin (core's 24px flow gap would otherwise win on mobile). */
+body .lcda-section-heading + * {
+	margin-block-start: 0;
 }
 
 body .lcda-section-heading > *,
@@ -67,7 +77,6 @@ body .lcda-section-heading__text > .lcda-eyebrow {
 		flex-direction: column;
 		align-items: stretch;
 		gap: 16px;
-		margin-bottom: 18px;
 	}
 }
 
@@ -87,7 +96,7 @@ body .lcda-section-heading__text > .lcda-eyebrow {
 	place-items: center;
 	box-sizing: border-box;
 	aspect-ratio: 1;
-	margin: 0;
+	margin-block: 0;
 	background-color: var(--lcda-mint);
 	color: var(--lcda-red);
 	font-family: var(--lcda-font-ui);
@@ -113,7 +122,7 @@ body .lcda-section-heading__text > .lcda-eyebrow {
 
 body :is(.lcda-sticker, .is-style-lcda-sticker) {
 	width: 70px;
-	margin: 0;
+	margin-block: 0;
 	padding: 10px;
 	font-size: 11px;
 	line-height: 1.15;
@@ -160,7 +169,7 @@ body .lcda-sticker--corner {
 	box-sizing: border-box;
 	width: 58px;
 	aspect-ratio: 1;
-	margin: 0;
+	margin-block: 0;
 	padding: 6px;
 	border-radius: 50%;
 	background-color: var(--lcda-ink);
@@ -195,7 +204,7 @@ body .lcda-sticker--corner {
 .lcda-tag.has-background {
 	display: inline-block;
 	width: fit-content;
-	margin: 0;
+	margin-block: 0;
 	padding: 3px 7px;
 	background-color: var(--lcda-mint);
 	color: var(--lcda-ink);
@@ -280,7 +289,7 @@ body :is(.lcda-event-card__poster, .lcda-event-detail__poster) {
 	align-self: start;
 	box-sizing: border-box;
 	width: 100%;
-	margin: 0;
+	margin-block: 0;
 	background-color: var(--lcda-placeholder);
 }
 
@@ -580,7 +589,7 @@ body .lcda-event-grid > * {
 .lcda-event-grid--featured,
 .lcda-event-grid--related {
 	display: grid;
-	gap: 24px;
+	gap: var(--lcda-space-30);
 }
 
 .lcda-event-grid--featured {
@@ -594,11 +603,11 @@ body .lcda-event-grid > * {
 /* Masonry: cards keep their natural height (native poster ratio + text). */
 .lcda-event-grid--agenda {
 	column-count: 3;
-	column-gap: 24px;
+	column-gap: var(--lcda-space-30);
 }
 
 body .lcda-event-grid--agenda > * {
-	margin: 0 0 24px;
+	margin: 0 0 var(--lcda-space-30);
 	break-inside: avoid;
 }
 
@@ -626,6 +635,13 @@ body .lcda-event-grid--agenda > * {
 		overscroll-behavior-x: contain;
 		scroll-snap-type: x mandatory;
 		scroll-padding-inline: var(--lcda-gutter);
+	}
+
+	/* Directly on a Lienzo page (alignwide) the grid is already full width
+	   minus the gutters: drop that inset so the row still bleeds. */
+	.lcda-canvas__content > :is(.lcda-event-grid--featured, .lcda-event-grid--related) {
+		max-width: none;
+		margin-inline: 0;
 	}
 
 	.lcda-event-grid--featured > *,
@@ -696,7 +712,7 @@ body .lcda-event-detail__burst {
 	display: grid;
 	grid-auto-columns: minmax(0, 1fr);
 	grid-auto-flow: column;
-	margin: 0;
+	margin-block: 0;
 	padding: 0;
 	border-top: var(--lcda-rule);
 	border-bottom: var(--lcda-rule);
@@ -786,7 +802,7 @@ body .lcda-event-cta {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 14px;
-	margin: 0;
+	margin-block: 0;
 }
 
 @media (max-width: 767px) {

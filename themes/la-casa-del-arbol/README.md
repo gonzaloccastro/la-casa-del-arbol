@@ -21,7 +21,7 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - `inc/assets.php` — CSS/JS del front.
 - `inc/astra.php` — integración con Astra (solo mediante filtros/acciones públicos de Astra).
 - `inc/patterns.php` — categorías de patterns y variantes de estilo de botones.
-- `theme.json` — tokens: colores, tipografías, tamaños, espaciados, ancho 1440px.
+- `theme.json` — tokens: colores, tipografías, tamaños, escala de espaciados, anchos (lectura 760px, contenedor 1376px + márgenes = 1440px).
 - `assets/css/base.css` — fundamentos visuales (tokens, resets de Astra, tipografía, botones).
 - `assets/css/components.css` — componentes compartidos: encabezado de sección, estrella de fecha y sticker,
   sello, etiqueta de categoría, tarjeta de evento, grillas de eventos, afiche y metadata del evento.
@@ -36,13 +36,21 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - Páginas diseñadas (Home, Agenda, eventos de demo): Atributos de página → Plantilla → **La Casa — Lienzo**.
 - Botones: estilo por defecto = Primario rojo. Variantes en la barra lateral del bloque: Oscuro, Contorno, Enlace de texto.
   En mobile los botones pasan a ancho completo; agregar la clase `lcda-inline` para mantener uno en línea.
+- Armado de páginas (plantilla Lienzo): la página se compone con **secciones**. Cada sección trae el ancho,
+  los márgenes laterales y el ritmo vertical del diseño; no hace falta ajustar márgenes a mano. Contrato
+  completo: `docs/implementation/layout-contract.md`.
 - Patterns (Insertar → Patrones):
+  - **La Casa del Árbol → Sección**: franja de ancho completo con encabezado; reemplazar el párrafo por el
+    contenido (tarjetas, botones, texto). Color de fondo opcional.
+  - **La Casa del Árbol → Sección de texto**: igual, con texto a ancho de lectura (páginas informativas).
   - **La Casa del Árbol → Encabezado de sección**: volanta + título + acción opcional (borrar el bloque
-    Botones si no hace falta).
-  - **La Casa del Árbol — Demo → Tarjeta de evento** (Destacada, Agenda, Relacionada): elegir el afiche,
-    reemplazar los textos de ejemplo y enlazar el título a la página del evento (toda la tarjeta queda
-    clickeable). Categoría amarilla: color de fondo Amarillo. El sello circular de la tarjeta de Agenda va
-    solo con "Entrada libre" o "A la gorra". Son contenido temporal hasta que exista `casa-eventos`.
+    Botones si no hace falta). Ocupa el ancho del contenedor.
+  - **La Casa del Árbol — Demo → Grilla de eventos** (Destacados, Agenda, Relacionados): en cada tarjeta
+    elegir el afiche, reemplazar los textos de ejemplo y enlazar el título a la página del evento (toda la
+    tarjeta queda clickeable). Categoría amarilla: color de fondo Amarillo. El sello circular de la Agenda
+    va solo con "Entrada libre" o "A la gorra". Son contenido temporal hasta que exista `casa-eventos`.
+- Espaciados: el editor ofrece solo la escala del diseño (XS 8 · S 16 · M 24 · L 32 · XL 48 · 2XL 64;
+  L, XL y 2XL se achican en mobile). No hay valores libres en píxeles.
 - Párrafo → estilo **Sticker (estrella)**: estrella menta con un texto corto (por ejemplo "A la gorra").
 - Los afiches se muestran completos, con su proporción original (nunca se recortan).
 

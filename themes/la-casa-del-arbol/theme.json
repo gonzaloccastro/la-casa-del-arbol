@@ -15,7 +15,7 @@
     },
     "layout": {
       "contentSize": "760px",
-      "wideSize": "1440px"
+      "wideSize": "1376px"
     },
     "color": {
       "custom": false,
@@ -40,15 +40,16 @@
       ]
     },
     "spacing": {
+      "customSpacingSize": false,
       "defaultSpacingSizes": false,
       "units": ["px", "rem", "em", "%", "vw", "vh"],
       "spacingSizes": [
-        { "slug": "10", "size": "8px", "name": "XS" },
-        { "slug": "20", "size": "16px", "name": "S" },
-        { "slug": "30", "size": "24px", "name": "M" },
-        { "slug": "40", "size": "32px", "name": "L" },
-        { "slug": "50", "size": "48px", "name": "XL" },
-        { "slug": "60", "size": "64px", "name": "2XL" }
+        { "slug": "10", "size": "var(--lcda-space-10, 8px)", "name": "XS · 8" },
+        { "slug": "20", "size": "var(--lcda-space-20, 16px)", "name": "S · 16" },
+        { "slug": "30", "size": "var(--lcda-space-30, 24px)", "name": "M · 24" },
+        { "slug": "40", "size": "var(--lcda-space-40, 32px)", "name": "L · 32 (móvil 18)" },
+        { "slug": "50", "size": "var(--lcda-space-50, 48px)", "name": "XL · 48 (móvil 32)" },
+        { "slug": "60", "size": "var(--lcda-space-60, 64px)", "name": "2XL · 64 (móvil 40)" }
       ]
     },
     "typography": {
@@ -129,6 +130,9 @@
     }
   },
   "styles": {
+    "spacing": {
+      "blockGap": "var(--wp--preset--spacing--30)"
+    },
     "color": {
       "background": "var(--wp--preset--color--paper)",
       "text": "var(--wp--preset--color--ink)"

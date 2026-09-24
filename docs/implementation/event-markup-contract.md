@@ -1,6 +1,6 @@
 # Event markup contract (theme ↔ casa-eventos)
 
-**Status:** v0.2. Step 3 (shared components) fixed the inner markup. The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
+**Status:** v0.3. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids. The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
 **Visual source of truth:** `docs/design/Final Design Handoff.md` §1.8–1.15, §2.2, §3, §4.
 
 ## Why this exists
@@ -50,7 +50,7 @@ The theme never registers event CPTs, meta, taxonomies or queries, and never shi
 | `lcda-event-grid lcda-event-grid--agenda` | Agenda | 3-col CSS-columns masonry → single-column feed |
 | `lcda-event-grid lcda-event-grid--related` | Single Event "También en la agenda" | 3 cols → horizontal snap scroller (card 62%) |
 
-Tablet (768–1023): featured 2 cols, agenda 2 cols, related 2 cols. The cards must be the grid's **direct children** (burst alternation and scroller sizing depend on it). The mobile scrollers bleed into the side gutter, so the grid must sit inside a container that has the gutter (`lcda-container` or equivalent).
+Tablet (768–1023): featured 2 cols, agenda 2 cols, related 2 cols. The cards must be the grid's **direct children** (burst alternation and scroller sizing depend on it). A grid sits either inside an `lcda-container` or directly on a Lienzo page as `alignwide`; in both cases it takes the container column, and on mobile the scrollers bleed into the gutter (see `layout-contract.md`).
 
 The masonry places cards top-to-bottom per column, so the visual order (columns) differs from the DOM order (chronological). Tab and screen-reader order follow the DOM. That is how the approved design works.
 
@@ -171,8 +171,8 @@ Theme patterns that hold static demo events. casa-eventos makes them obsolete, a
 
 | Pattern (category "La Casa del Árbol — Demo") | File | Since |
 |---|---|---|
-| Tarjeta de evento — Destacada (demo) | `patterns/demo-event-card-featured.php` | Step 3 |
-| Tarjeta de evento — Agenda (demo) | `patterns/demo-event-card-full.php` | Step 3 |
-| Tarjeta de evento — Relacionada (demo) | `patterns/demo-event-card-compact.php` | Step 3 |
+| Grilla de eventos — Destacados (demo): 4 featured cards | `patterns/demo-event-grid-featured.php` | Step 3.1 |
+| Grilla de eventos — Agenda (demo): 3 full cards | `patterns/demo-event-grid-agenda.php` | Step 3.1 |
+| Grilla de eventos — Relacionados (demo): 3 compact cards | `patterns/demo-event-grid-related.php` | Step 3.1 |
 
-They hold placeholder text only ("Título del evento", "Día · 00:00", "00") and an empty image slot. No event data and no artwork ship in the theme.
+They hold placeholder text only ("Título del evento", "Día · 00:00", "00") and empty image slots. No event data and no artwork ship in the theme. Step 3's single-card demo patterns (`demo-event-card-*`) were removed in Step 3.1: a card inserted on its own landed in the reading column, which is not a layout the design uses. Cards already inserted from them keep working, because styling depends only on classes.
