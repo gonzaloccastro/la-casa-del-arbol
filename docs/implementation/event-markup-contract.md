@@ -1,6 +1,6 @@
 # Event markup contract (theme ↔ casa-eventos)
 
-**Status:** v0.3. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids. The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
+**Status:** v0.4. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
 **Visual source of truth:** `docs/design/Final Design Handoff.md` §1.8–1.15, §2.2, §3, §4.
 
 ## Why this exists
@@ -171,7 +171,7 @@ Theme patterns that hold static demo events. casa-eventos makes them obsolete, a
 
 | Pattern (category "La Casa del Árbol — Demo") | File | Since |
 |---|---|---|
-| Grilla de eventos — Destacados (demo): 4 featured cards | `patterns/demo-event-grid-featured.php` | Step 3.1 |
+| Grilla de eventos — Destacados (demo): 4 featured cards. Also included by `home-featured-events.php` (Home), so the Home cards are the same demo markup | `patterns/demo-event-grid-featured.php` | Step 3.1 |
 | Grilla de eventos — Agenda (demo): 3 full cards | `patterns/demo-event-grid-agenda.php` | Step 3.1 |
 | Grilla de eventos — Relacionados (demo): 3 compact cards | `patterns/demo-event-grid-related.php` | Step 3.1 |
 

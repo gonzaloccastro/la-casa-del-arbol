@@ -32,10 +32,13 @@ function lcda_asset_version( $relative_path ) {
  * Neither Astra's style.css nor this theme's style.css holds any CSS (only
  * the theme header), so neither is enqueued. base.css loads after Astra's
  * main stylesheet so its resets win on equal specificity. components.css
- * (section heading, burst, tag, event card...) loads on every page, because
- * editors can insert its patterns anywhere. The site chrome (header, mobile
- * menu, footer) is only rendered on Lienzo pages, so its CSS and JS load
- * only there.
+ * (section heading, burst, tag, event card...) and home.css (hero, Festejá,
+ * Instagram, newsletter) load on every page, because editors can insert
+ * their patterns anywhere. The site chrome (header, mobile menu, footer) is
+ * only rendered on Lienzo pages, so its CSS and JS load only there.
+ *
+ * The hero carousel script is only registered here; inc/blocks.php enqueues
+ * it when a page actually renders a hero (it prints in the footer).
  */
 function lcda_enqueue_assets() {
 	$deps = wp_style_is( 'astra-theme-css', 'registered' ) ? array( 'astra-theme-css' ) : array();
@@ -52,6 +55,43 @@ function lcda_enqueue_assets() {
 		LCDA_URI . '/assets/css/components.css',
 		array( 'lcda-base' ),
 		lcda_asset_version( 'assets/css/components.css' )
+	);
+
+	wp_enqueue_style(
+		'lcda-home',
+		LCDA_URI . '/assets/css/home.css',
+		array( 'lcda-components' ),
+		lcda_asset_version( 'assets/css/home.css' )
+	);
+
+	wp_register_script(
+		'lcda-hero-carousel',
+		LCDA_URI . '/assets/js/hero-carousel.js',
+		array(),
+		lcda_asset_version( 'assets/js/hero-carousel.js' ),
+		array(
+			'in_footer' => true,
+			'strategy'  => 'defer',
+		)
+	);
+
+	// Interface strings of the carousel controls (%1$d = slide, %2$d = total).
+	$hero_strings = array(
+		'label'      => __( 'Imágenes de La Casa', 'la-casa-del-arbol' ),
+		'carousel'   => __( 'carrusel', 'la-casa-del-arbol' ),
+		'slide'      => __( 'imagen', 'la-casa-del-arbol' ),
+		/* translators: 1: slide number, 2: number of slides. */
+		'slideLabel' => __( '%1$d de %2$d', 'la-casa-del-arbol' ),
+		'prev'       => __( 'Imagen anterior', 'la-casa-del-arbol' ),
+		'next'       => __( 'Imagen siguiente', 'la-casa-del-arbol' ),
+		'dots'       => __( 'Elegir imagen', 'la-casa-del-arbol' ),
+		/* translators: 1: slide number, 2: number of slides. */
+		'goTo'       => __( 'Imagen %1$d de %2$d', 'la-casa-del-arbol' ),
+	);
+	wp_add_inline_script(
+		'lcda-hero-carousel',
+		'window.lcdaHeroCarousel = ' . wp_json_encode( $hero_strings ) . ';',
+		'before'
 	);
 
 	if ( lcda_is_canvas() ) {

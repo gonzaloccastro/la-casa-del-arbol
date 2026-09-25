@@ -23,7 +23,7 @@
  * - Breakpoints: mobile max-width 767px · tablet 768–1023px · desktop 1024px+.
  *
  * Contents
- *   1. Section heading
+ *   1. Section heading (+ --band modifier, section actions)
  *   2. Date burst and sticker
  *   3. Entrada stamp
  *   4. Category tag
@@ -77,6 +77,35 @@ body .lcda-section-heading__text > .lcda-eyebrow {
 		flex-direction: column;
 		align-items: stretch;
 		gap: 16px;
+	}
+}
+
+/* --band: the heading IS the band's content (Festejá, newsletter; Handoff
+   §2.3, §1.17): text and action vertically centered, 32px apart, no gap
+   below. Mobile: stacked, 18px apart. Both values are preset L. */
+body .lcda-section-heading--band {
+	align-items: center;
+	gap: var(--lcda-space-40);
+	margin-block: 0;
+}
+
+@media (max-width: 767px) {
+	body .lcda-section-heading--band {
+		align-items: stretch;
+		gap: var(--lcda-space-40);
+	}
+}
+
+/* Action row closing a section, e.g. "Ver toda la agenda" under the Home
+   grid (Handoff §2.2: 36px below the grid; mobile 24px). 36 is not on the
+   spacing scale: it is the one value the design uses here. */
+body .lcda-section-actions {
+	margin-block: 36px 0;
+}
+
+@media (max-width: 767px) {
+	body .lcda-section-actions {
+		margin-block-start: var(--lcda-space-30);
 	}
 }
 

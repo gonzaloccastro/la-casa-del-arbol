@@ -19,7 +19,7 @@
  *   5. Layout primitives
  *   6. Buttons (core/button + block style variations)
  *   7. Motion
- *   8. Legacy (pre-V1 classes, remove when their patterns are rebuilt)
+ *   8. Legacy (pre-V1 classes, remove after checking live content)
  */
 
 /* ==========================================================================
@@ -510,9 +510,10 @@ a:hover {
 
 /* ==========================================================================
    8. Legacy (pre-V1)
-   Used by the original section-heading / whatsapp-cta patterns and possibly
-   by existing content. Kept unchanged (except the removed hover-lift) until
-   those patterns are rebuilt in Steps 3–4; then delete this block.
+   Used by the original section-heading / whatsapp-cta patterns. Both were
+   rebuilt (Steps 3.1 and 4) and no theme pattern uses these classes now,
+   but content inserted from the old patterns may still exist on the site.
+   Delete this block once the live pages are checked for these classes.
    ========================================================================== */
 
 .lcda-kicker {

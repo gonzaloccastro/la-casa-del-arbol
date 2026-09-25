@@ -76,6 +76,9 @@ Components set only `margin-block`, never `margin-inline`, so they never undo th
 | Sección | `section.lcda-section.alignfull` > `.lcda-container` > section heading + content | any designed section; replace the paragraph with grids, buttons… |
 | Sección de texto | same + `.lcda-reading` with paragraphs | informative pages (Reservas, Alquilá, La Casa, Contacto) |
 | Encabezado de sección | `alignwide` section heading | inside a section, or directly on a page (container column) |
+| Home sections (Step 4): Carrusel de portada, Eventos destacados, ¡Festejá en el Árbol!, Seguinos en Instagram, Newsletter; and Home (página completa) | built on the rows above | see `home-contract.md` |
+
+Two section-level primitives were added in Step 4 (`components.css`): `lcda-section-heading--band` (the heading is a band's whole content: text + action centered, gap L, no margin below) and `lcda-section-actions` (closing action row, 36 / 24 above it, the design's value for "Ver toda la agenda").
 
 The demo event grids (category "Demo") are `alignwide` grids with the right card variant: `lcda-event-grid--featured`, `--agenda`, `--related`. See `event-markup-contract.md`.
 

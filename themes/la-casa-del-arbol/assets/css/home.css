@@ -1,0 +1,535 @@
+/**
+ * La Casa del Árbol — Home sections (Design V1, Step 4).
+ *
+ * Source of truth: docs/design/Final Design Handoff.md §2 (Home), §1.16,
+ * §1.17, §1.19, §1.20 and Website Direction.dc.html. Composition contract:
+ * docs/implementation/home-contract.md.
+ *
+ * The sections are ordinary lcda-section > lcda-container blocks (layout
+ * contract) built from Gutenberg patterns; this file only adds what is
+ * specific to each one. Instagram grid and newsletter band are reusable on
+ * any page, though V1 uses them on the Home only.
+ *
+ * Same rules as components.css: style by lcda-* classes (plus the block
+ * style classes editors pick), "body" prefix to beat core's layout margins,
+ * margin-block only on outer elements, spacing from the --lcda-space-* scale.
+ * Loaded on every front-end page and in the block editor.
+ *
+ * Contents
+ *   1. Hero carousel
+ *   2. ¡Festejá en el Árbol! band
+ *   3. Instagram
+ *   4. Newsletter band
+ */
+
+/* ==========================================================================
+   1. Hero carousel (Handoff §2.1)
+   Full-bleed images, no overlay copy. Markup: section.lcda-hero (flush
+   section) > .lcda-hero__track (group) > image blocks, one per slide.
+   The track is a horizontal scroll-snap row, so swipe and trackpad work
+   natively and every image stays reachable without JavaScript.
+   assets/js/hero-carousel.js adds arrows, dots, labels and state, then the
+   class "is-ready" (which hides the scrollbar). No autoplay.
+   ========================================================================== */
+
+.lcda-hero {
+	--lcda-hero-height: clamp(640px, 82vh, 920px);
+	--lcda-hero-control-bg: rgba(252, 250, 246, 0.85);
+	position: relative;
+	overflow: hidden;
+	background-color: var(--lcda-ink);
+}
+
+body .lcda-hero > * {
+	margin-block: 0;
+}
+
+.lcda-hero__track {
+	display: flex;
+	height: var(--lcda-hero-height);
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-x: contain;
+	scroll-snap-type: x mandatory;
+}
+
+body .lcda-hero__track > * {
+	position: relative;
+	flex: 0 0 100%;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	overflow: hidden;
+	background-color: var(--lcda-placeholder);
+	scroll-snap-align: start;
+	scroll-snap-stop: always;
+}
+
+.lcda-hero__track a {
+	display: block;
+	height: 100%;
+}
+
+/* Cover, centered (Handoff §1.16): no distortion, the frame crops. */
+.lcda-hero__track img {
+	display: block;
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
+
+.lcda-hero.is-ready .lcda-hero__track {
+	scrollbar-width: none;
+}
+
+.lcda-hero.is-ready .lcda-hero__track::-webkit-scrollbar {
+	display: none;
+}
+
+/* Controls (created by the script). Selectors include :hover/:focus so
+   Astra's global button colors never apply. */
+.lcda-hero .lcda-hero__arrow,
+.lcda-hero .lcda-hero__arrow:hover,
+.lcda-hero .lcda-hero__arrow:focus {
+	position: absolute;
+	top: 50%;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	box-sizing: border-box;
+	width: 36px;
+	height: 36px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background-color: var(--lcda-hero-control-bg);
+	box-shadow: none;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 15px;
+	font-weight: 900;
+	line-height: 1;
+	cursor: pointer;
+	transform: translateY(-50%);
+}
+
+.lcda-hero .lcda-hero__arrow--prev {
+	left: 20px;
+}
+
+.lcda-hero .lcda-hero__arrow--next {
+	right: 20px;
+}
+
+/* Hit area 44px without changing the 36px look (Handoff §1.20). */
+.lcda-hero__arrow::after {
+	content: "";
+	position: absolute;
+	inset: -4px;
+}
+
+.lcda-hero__dots {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 2;
+	display: flex;
+	justify-content: center;
+	margin: 0;
+	padding: 0;
+	pointer-events: none;
+}
+
+/* Each dot is a 44px-tall button; the visible 4px bar sits at its bottom,
+   20px above the image edge (mobile 14px). Bars 8px apart (mobile 16px). */
+.lcda-hero .lcda-hero__dot,
+.lcda-hero .lcda-hero__dot:hover,
+.lcda-hero .lcda-hero__dot:focus {
+	display: flex;
+	align-items: flex-end;
+	box-sizing: border-box;
+	height: 44px;
+	margin: 0;
+	padding: 0 4px 20px;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.lcda-hero__dot-bar {
+	display: block;
+	width: 10px;
+	height: 4px;
+	background-color: var(--lcda-paper);
+}
+
+/* Active: longer red bar (shape, not only color) + aria-current. */
+.lcda-hero__dot[aria-current="true"] .lcda-hero__dot-bar {
+	width: 24px;
+	background-color: var(--lcda-red);
+}
+
+/* Focus ring readable on any photo: ink ring + paper halo. */
+.lcda-hero :is(.lcda-hero__arrow, .lcda-hero__dot):focus-visible {
+	outline: 2px solid var(--lcda-ink);
+	outline-offset: 0;
+	box-shadow: 0 0 0 4px var(--lcda-paper);
+}
+
+@media (max-width: 767px) {
+	.lcda-hero {
+		--lcda-hero-height: clamp(420px, 62vh, 560px);
+	}
+
+	.lcda-hero .lcda-hero__arrow,
+	.lcda-hero .lcda-hero__arrow:hover,
+	.lcda-hero .lcda-hero__arrow:focus {
+		width: 40px;
+		height: 40px;
+		font-size: 16px;
+	}
+
+	.lcda-hero .lcda-hero__arrow--prev {
+		left: 10px;
+	}
+
+	.lcda-hero .lcda-hero__arrow--next {
+		right: 10px;
+	}
+
+	.lcda-hero__arrow::after {
+		inset: -2px;
+	}
+
+	.lcda-hero__dots {
+		gap: 6px;
+	}
+
+	.lcda-hero .lcda-hero__dot,
+	.lcda-hero .lcda-hero__dot:hover,
+	.lcda-hero .lcda-hero__dot:focus {
+		padding: 0 5px 14px;
+	}
+}
+
+/* Block editor only (these classes never exist on the front end): the
+   slides become a row of numbered thumbnails, so every image can be
+   selected and replaced; the hidden page title is shown as a small label. */
+.lcda-hero__track.block-editor-block-list__layout {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--lcda-space-10);
+	height: auto;
+	padding: var(--lcda-space-10);
+	overflow: visible;
+	scroll-snap-type: none;
+	counter-reset: lcda-slide;
+}
+
+body .lcda-hero__track.block-editor-block-list__layout > * {
+	height: 200px;
+	counter-increment: lcda-slide;
+}
+
+.lcda-hero__track.block-editor-block-list__layout > ::before {
+	content: counter(lcda-slide);
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 1;
+	padding: 2px 8px;
+	background-color: var(--lcda-ink);
+	color: var(--lcda-paper);
+	font-family: var(--lcda-font-ui);
+	font-size: 12px;
+	font-weight: 800;
+}
+
+.lcda-hero > .screen-reader-text.block-editor-block-list__block {
+	position: static;
+	width: auto;
+	height: auto;
+	margin: 0;
+	padding: var(--lcda-space-10) var(--lcda-space-10) 0;
+	overflow: visible;
+	clip: auto;
+	clip-path: none;
+	color: var(--lcda-paper);
+	font-family: var(--lcda-font-ui);
+	font-size: 12px;
+	font-weight: 800;
+	line-height: normal;
+	opacity: 0.7;
+}
+
+/* ==========================================================================
+   2. ¡Festejá en el Árbol! (Handoff §2.3)
+   Red band (block colors Rojo Casa / Papel) with a --band section heading:
+   yellow eyebrow + H2 left, dark WhatsApp button right; mobile stacked,
+   button full width. The mint "A la gorra" sticker breaks the band's top
+   edge, lined up with the right edge of the content column.
+   ========================================================================== */
+
+body .lcda-festeja .lcda-section-heading__title {
+	font-size: clamp(2rem, 4.2vw, 3.4rem);
+}
+
+body .lcda-festeja .lcda-section-heading__text > .lcda-eyebrow {
+	margin-bottom: 10px;
+}
+
+.lcda-festeja .wp-block-button .wp-block-button__link,
+.lcda-festeja .wp-block-button .wp-block-button__link:hover,
+.lcda-festeja .wp-block-button .wp-block-button__link:focus {
+	padding: 18px 30px;
+	font-size: 14px;
+	white-space: nowrap;
+}
+
+/* The sticker's host is the container (right edge = content column); the
+   band's padding sits above the container, so the offset includes it. */
+body .lcda-festeja .lcda-sticker--corner {
+	top: calc(-1 * var(--lcda-band-space) - 18px);
+}
+
+/* Keyboard focus on red. */
+.lcda-festeja :focus-visible {
+	outline-color: var(--lcda-paper);
+}
+
+@media (max-width: 767px) {
+	body .lcda-festeja .lcda-section-heading__title {
+		font-size: 1.9rem;
+	}
+
+	body .lcda-festeja .lcda-section-heading__text > .lcda-eyebrow {
+		margin-bottom: 8px;
+	}
+
+	.lcda-festeja .wp-block-buttons > .wp-block-button .wp-block-button__link,
+	.lcda-festeja .wp-block-buttons > .wp-block-button .wp-block-button__link:hover,
+	.lcda-festeja .wp-block-buttons > .wp-block-button .wp-block-button__link:focus {
+		padding: 16px;
+		font-size: 13px;
+		white-space: normal;
+	}
+
+	body .lcda-festeja .lcda-sticker--corner {
+		top: calc(-1 * var(--lcda-band-space) - 16px);
+	}
+}
+
+/* ==========================================================================
+   3. Instagram (Handoff §2.4, §1.19)
+   White section. Heading: eyebrow (account) + H2 + outline "Seguir". Mobile:
+   eyebrow on its own line, then H2 and Seguir on one row.
+   Grid of square tiles (image blocks), cover crop, 2px frame: 6 columns
+   (tablet 3, mobile 3 x 2). Image block style "Reel" adds the ▶ marker.
+   ========================================================================== */
+
+body .lcda-instagram .lcda-section-heading__title {
+	font-size: clamp(1.8rem, 3.4vw, 2.8rem);
+}
+
+.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link,
+.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link:hover,
+.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link:focus {
+	position: relative;
+	padding: 11px 20px;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.lcda-instagram-grid {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: var(--lcda-space-20);
+}
+
+body .lcda-instagram-grid > * {
+	position: relative;
+	box-sizing: border-box;
+	aspect-ratio: 1;
+	margin: 0;
+	overflow: hidden;
+	border: var(--lcda-rule);
+	background-color: var(--lcda-placeholder);
+}
+
+.lcda-instagram-grid a {
+	display: block;
+	height: 100%;
+}
+
+.lcda-instagram-grid img {
+	display: block;
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
+
+.lcda-instagram-grid > .is-style-lcda-reel::after {
+	content: "▶";
+	content: "▶" / "";
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: grid;
+	place-items: center;
+	width: 20px;
+	height: 20px;
+	background-color: var(--lcda-ink);
+	color: var(--lcda-white);
+	font-size: 10px;
+	line-height: 1;
+	pointer-events: none;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+	.lcda-instagram-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 767px) {
+	body .lcda-instagram .lcda-section-heading__title {
+		font-size: 1.5rem;
+	}
+
+	/* Eyebrow row, then title + Seguir. The text wrapper steps aside
+	   (display: contents) so its two children join the heading grid. */
+	body .lcda-instagram .lcda-section-heading {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0 12px;
+	}
+
+	.lcda-instagram .lcda-section-heading__text {
+		display: contents;
+	}
+
+	.lcda-instagram .lcda-section-heading__text > .lcda-eyebrow {
+		grid-column: 1 / -1;
+	}
+
+	.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link,
+	.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link:hover,
+	.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link:focus {
+		padding: 8px 14px;
+		font-size: 11px;
+	}
+
+	/* About 33px tall: invisible extension to 45px (Handoff §1.20). */
+	.lcda-instagram .wp-block-button.is-style-lcda-outline .wp-block-button__link::after {
+		content: "";
+		position: absolute;
+		inset: -6px 0;
+	}
+
+	.lcda-instagram-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--lcda-space-10);
+	}
+
+	.lcda-instagram-grid > .is-style-lcda-reel::after {
+		top: 6px;
+		right: 6px;
+		width: 18px;
+		height: 18px;
+		font-size: 9px;
+	}
+}
+
+/* ==========================================================================
+   4. Newsletter band (Handoff §1.17 instance A)
+   --band section heading: eyebrow "Comunidad" + H2 left, form right.
+   Presentation only in V1 (patterns/newsletter.php): not a <form>, the
+   button is type="button" + aria-disabled, so nothing is sent or stored.
+   Desktop: input + "Sumarme" joined in one row (max 460px). Mobile:
+   vertical join, full-width button.
+   ========================================================================== */
+
+body .lcda-newsletter .lcda-section-heading__title {
+	font-size: clamp(1.7rem, 3vw, 2.3rem);
+	line-height: 1;
+}
+
+.lcda-newsletter-form--band {
+	display: flex;
+	flex: 1;
+	min-width: 280px;
+	max-width: 460px;
+}
+
+.lcda-newsletter-form--band .lcda-newsletter-form__input,
+.lcda-newsletter-form--band .lcda-newsletter-form__input:focus {
+	flex: 1;
+	min-width: 0;
+	height: auto;
+	margin: 0;
+	padding: 14px 16px;
+	border: var(--lcda-rule);
+	border-right: 0;
+	border-radius: 0;
+	background-color: var(--lcda-white);
+	box-shadow: none;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-body);
+	font-size: 0.875rem;
+	line-height: normal;
+}
+
+.lcda-newsletter-form--band .lcda-newsletter-form__button,
+.lcda-newsletter-form--band .lcda-newsletter-form__button:hover,
+.lcda-newsletter-form--band .lcda-newsletter-form__button:focus {
+	flex-shrink: 0;
+	margin: 0;
+	padding: 0 22px;
+	border: var(--lcda-rule);
+	border-radius: 0;
+	background-color: var(--lcda-ink);
+	box-shadow: none;
+	color: var(--lcda-white);
+	font-family: var(--lcda-font-ui);
+	font-size: 12.5px;
+	font-weight: 800;
+	line-height: normal;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+	body .lcda-newsletter .lcda-section-heading__title {
+		font-size: 1.5rem;
+	}
+
+	.lcda-newsletter-form--band {
+		flex: none;
+		flex-direction: column;
+		min-width: 0;
+		max-width: none;
+	}
+
+	.lcda-newsletter-form--band .lcda-newsletter-form__input,
+	.lcda-newsletter-form--band .lcda-newsletter-form__input:focus {
+		border-right: var(--lcda-rule);
+		border-bottom: 0;
+	}
+
+	.lcda-newsletter-form--band .lcda-newsletter-form__button,
+	.lcda-newsletter-form--band .lcda-newsletter-form__button:hover,
+	.lcda-newsletter-form--band .lcda-newsletter-form__button:focus {
+		padding: 14px;
+	}
+}

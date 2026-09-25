@@ -21,3 +21,4 @@ require_once LCDA_DIR . '/inc/template-tags.php';
 require_once LCDA_DIR . '/inc/assets.php';
 require_once LCDA_DIR . '/inc/astra.php';
 require_once LCDA_DIR . '/inc/patterns.php';
+require_once LCDA_DIR . '/inc/blocks.php';

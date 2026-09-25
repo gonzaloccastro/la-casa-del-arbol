@@ -20,12 +20,18 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - `inc/template-tags.php` — helpers de presentación (logo, enlaces de menú).
 - `inc/assets.php` — CSS/JS del front.
 - `inc/astra.php` — integración con Astra (solo mediante filtros/acciones públicos de Astra).
-- `inc/patterns.php` — categorías de patterns y variantes de estilo de botones.
+- `inc/patterns.php` — categorías de patterns y variantes de estilo (botones, sticker, reel de Instagram).
+- `inc/blocks.php` — comportamiento al renderizar: carga el script del carrusel solo donde hay carrusel; el botón de
+  WhatsApp de la franja Festejá toma su destino del menú "La Casa — CTA WhatsApp".
 - `theme.json` — tokens: colores, tipografías, tamaños, escala de espaciados, anchos (lectura 760px, contenedor 1376px + márgenes = 1440px).
 - `assets/css/base.css` — fundamentos visuales (tokens, resets de Astra, tipografía, botones).
 - `assets/css/components.css` — componentes compartidos: encabezado de sección, estrella de fecha y sticker,
   sello, etiqueta de categoría, tarjeta de evento, grillas de eventos, afiche y metadata del evento.
+- `assets/css/home.css` + `assets/js/hero-carousel.js` — secciones de la Home: carrusel de portada, franja
+  Festejá, Instagram y newsletter. Contrato: `docs/implementation/home-contract.md`.
 - `assets/css/chrome.css` + `assets/js/mobile-menu.js` — header, menú mobile y footer.
+- `assets/images/fixtures/` — **imágenes provisorias** (rectángulos grises rotulados) del carrusel y de Instagram
+  hasta que haya fotos reales. Se borran cuando ninguna página las use (ver `home-contract.md`).
 - `assets/images/logo-*.svg` — logo canónico (símbolo y completo), tomado sin cambios de
   `docs/design/Website Direction.dc.html`; solo el relleno pasa a `currentColor`.
 - `template-parts/site/` — header, menú mobile (`<dialog>`) y footer.
@@ -34,6 +40,11 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 
 ## Uso en WordPress
 - Páginas diseñadas (Home, Agenda, eventos de demo): Atributos de página → Plantilla → **La Casa — Lienzo**.
+- **Home**: página con plantilla Lienzo + patrón **La Casa del Árbol → Home (página completa)** (también se ofrece al
+  crear una página nueva). Después: reemplazar las fotos del carrusel (seleccionar imagen → Reemplazar, y escribir
+  el texto alternativo), los afiches y textos de las tarjetas, las imágenes de Instagram (estilo "Reel de Instagram"
+  para los reels) y la volanta del mes. Ajustes → Lectura → página de inicio estática = Home. Pasos completos en
+  `docs/implementation/home-contract.md`.
 - Botones: estilo por defecto = Primario rojo. Variantes en la barra lateral del bloque: Oscuro, Contorno, Enlace de texto.
   En mobile los botones pasan a ancho completo; agregar la clase `lcda-inline` para mantener uno en línea.
 - Armado de páginas (plantilla Lienzo): la página se compone con **secciones**. Cada sección trae el ancho,
@@ -51,6 +62,9 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
     va solo con "Entrada libre" o "A la gorra". Son contenido temporal hasta que exista `casa-eventos`.
 - Espaciados: el editor ofrece solo la escala del diseño (XS 8 · S 16 · M 24 · L 32 · XL 48 · 2XL 64;
   L, XL y 2XL se achican en mobile). No hay valores libres en píxeles.
+- Secciones de la Home, también sueltas en **La Casa del Árbol**: Carrusel de portada · Eventos destacados del mes ·
+  ¡Festejá en el Árbol! (WhatsApp) · Seguinos en Instagram · Newsletter (Comunidad). El newsletter todavía no
+  envía nada (botón desactivado); Instagram son imágenes fijas, sin conexión con Instagram.
 - Párrafo → estilo **Sticker (estrella)**: estrella menta con un texto corto (por ejemplo "A la gorra").
 - Los afiches se muestran completos, con su proporción original (nunca se recortan).
 
@@ -63,7 +77,7 @@ menú asignado no muestra nada.
 | La Casa — Navegación principal | Header desktop y menú mobile |
 | La Casa — Footer: Navegación | Columna "Navegación" del footer |
 | La Casa — Footer: Visitanos | Columna "Visitanos": dirección, teléfono, Instagram (enlaces personalizados) |
-| La Casa — CTA WhatsApp | Solo se usa el **primer ítem**: su URL es el destino del botón WhatsApp |
+| La Casa — CTA WhatsApp | Solo se usa el **primer ítem**: su URL es el destino del botón WhatsApp (header, menú mobile y franja ¡Festejá en el Árbol!) |
 
 Los textos visibles del CTA ("WhatsApp" en el header, "Escribinos por WhatsApp" en el menú
 mobile) son textos de interfaz del theme; del menú solo se toma el destino (URL, pestaña nueva).

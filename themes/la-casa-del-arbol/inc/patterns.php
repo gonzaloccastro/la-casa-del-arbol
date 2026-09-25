@@ -42,7 +42,8 @@ add_action( 'init', 'lcda_register_pattern_categories' );
  *
  * Buttons (Final Design Handoff §1.12): the default (unstyled) core button is
  * the red Primary variant; visuals live in assets/css/base.css. Paragraph
- * "Sticker (estrella)": visuals in assets/css/components.css.
+ * "Sticker (estrella)": visuals in assets/css/components.css. Image
+ * "Reel de Instagram": visuals in assets/css/home.css.
  */
 function lcda_register_block_styles() {
 	$button_styles = array(
@@ -67,6 +68,16 @@ function lcda_register_block_styles() {
 		array(
 			'name'  => 'lcda-sticker',
 			'label' => __( 'Sticker (estrella)', 'la-casa-del-arbol' ),
+		)
+	);
+
+	// Instagram tile that is a reel: ▶ marker (Handoff §1.19). Visuals in
+	// assets/css/home.css; only shown inside the Instagram grid.
+	register_block_style(
+		'core/image',
+		array(
+			'name'  => 'lcda-reel',
+			'label' => __( 'Reel de Instagram', 'la-casa-del-arbol' ),
 		)
 	);
 }

@@ -93,6 +93,7 @@ $RequiredFiles = @(
     'inc/assets.php',
     'inc/astra.php',
     'inc/patterns.php',
+    'inc/blocks.php',
     'page-templates/canvas.php',
     'template-parts/site/header.php',
     'template-parts/site/mobile-menu.php',
