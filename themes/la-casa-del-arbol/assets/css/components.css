@@ -664,6 +664,15 @@ body .lcda-event-grid--agenda > * {
 		overscroll-behavior-x: contain;
 		scroll-snap-type: x mandatory;
 		scroll-padding-inline: var(--lcda-gutter);
+		/* The row still scrolls (touch, trackpad, keyboard via the card
+		   links); only the scrollbar is hidden, as in the design. The
+		   partly visible next card is the scroll cue. */
+		scrollbar-width: none;
+	}
+
+	.lcda-event-grid--featured::-webkit-scrollbar,
+	.lcda-event-grid--related::-webkit-scrollbar {
+		display: none;
 	}
 
 	/* Directly on a Lienzo page (alignwide) the grid is already full width

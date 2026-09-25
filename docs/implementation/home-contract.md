@@ -1,6 +1,6 @@
 # Home contract (composition, carousel, assets, activation)
 
-**Status:** v1, Step 4 (theme 0.4.0). Patterns in `themes/la-casa-del-arbol/patterns/`, CSS in `assets/css/home.css` (+ two primitives in `components.css`), script `assets/js/hero-carousel.js`, render-time behavior in `inc/blocks.php`.
+**Status:** v1.1, Step 4 (theme 0.4.0), live-QA follow-up 0.4.1. Ownership and integration boundaries: `content-ownership.md`. Patterns in `themes/la-casa-del-arbol/patterns/`, CSS in `assets/css/home.css` (+ two primitives in `components.css`), script `assets/js/hero-carousel.js`, render-time behavior in `inc/blocks.php`.
 **Design source:** `docs/design/Final Design Handoff.md` §2 (Home), §1.16–1.20; `Website Direction.dc.html` screens "01 Home" (desktop and mobile). This document covers only what the implementation decides; it does not restate the handoff.
 
 ## Composition
@@ -62,8 +62,9 @@ Inside sections: heading → content = preset L (32 / 18); grid → closing acti
 
 ## Event cards: fixture boundary
 
+- **The Home cards are presentational placeholders, not an editing model.** The Event entity (future `casa-eventos`) is the single source of truth. Home "Eventos destacados" will be a query of it: `featured_on_home` + current/upcoming, nearest first, past events dropping out automatically (`content-ownership.md`). Editors must not maintain event data on the Home.
 - The Destacados cards are the demo featured grid (`demo-event-grid-featured.php`, included by `home-featured-events.php`): 4 `lcda-event-card--featured` cards with placeholder text and empty poster slots. The poster slots show the 4:5 placeholder until an editor picks a poster.
-- There is no CPT, meta, query, product or stock in the theme. Editors replace the text and poster in each card and link the title to the event page.
+- There is no CPT, meta, query, product or stock in the theme. For the visual phase only, the placeholder text and posters can be changed in each card, but nothing entered there carries over to `casa-eventos`.
 - **Future replacement:** casa-eventos outputs real featured events into the same `lcda-event-grid--featured` markup (`event-markup-contract.md`). The swap replaces only the grid block inside the section; the heading, action row and section stay.
 - The eyebrow "Septiembre 2026" is editorial copy. Update it monthly until casa-eventos provides the month.
 - The "Ver agenda completa →" and "Ver toda la agenda" links point to the published page with the slug `agenda`. The URL is resolved when the pattern is inserted. If that page doesn't exist, they have no destination until an editor links them.
@@ -76,12 +77,14 @@ Inside sections: heading → content = preset L (32 / 18); grid → closing acti
 
 ## Instagram
 
-- The images are static and there is no integration: no API, feed plugin, scraping or external script. There are 6 image blocks.
+- **Integration boundary:** the feed will come from an external Instagram plugin (likely Smash Balloon class), which owns authentication, API, retrieval and feed data. The theme owns the section: heading, "Seguir", rhythm, and tile presentation. The `lcda-instagram-grid` group is the replaceable part (`content-ownership.md`).
+- The images are static and there is no integration: no API, feed plugin, scraping or external script. There are 6 fixture image blocks.
 - Image block style **Reel de Instagram** (`is-style-lcda-reel`) adds the ▶ marker. It only shows inside `.lcda-instagram-grid`.
 - "Seguir" links to the public profile (`https://www.instagram.com/_lacasadelarbol_/`). The link is editorial and can be changed in the block.
 
 ## Newsletter
 
+- **Integration boundary:** the provider (not chosen; Mailchimp, Brevo…) will own subscription processing, validation, API, consent records and lists. The theme owns the band and the form's look. The Custom HTML block is the replaceable part (`content-ownership.md`).
 - Presentation only, like the footer "Sumate" form. It is a Custom HTML block with a labelled `type="email"` input (`autocomplete="email"`, no `name`), not a `<form>`. The button is `type="button"` with `aria-disabled="true"` and a screen-reader note: "La suscripción estará disponible próximamente".
 - Nothing is submitted, stored or faked, and no success message is shown. A provider integration replaces the Custom HTML block later.
 - It uses fixed ids, so insert it once per page. On multisite, only users with `unfiltered_html` can edit that HTML block.

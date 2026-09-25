@@ -76,11 +76,14 @@ menú asignado no muestra nada.
 |---|---|
 | La Casa — Navegación principal | Header desktop y menú mobile |
 | La Casa — Footer: Navegación | Columna "Navegación" del footer |
-| La Casa — Footer: Visitanos | Columna "Visitanos": dirección, teléfono, Instagram (enlaces personalizados) |
+| La Casa — Footer: Visitanos | Columna "Visitanos": dirección, teléfono, Instagram (enlaces personalizados). Si el menú asignado no tiene ítems, la columna muestra solo el título: cargar los ítems en Apariencia → Menús |
 | La Casa — CTA WhatsApp | Solo se usa el **primer ítem**: su URL es el destino del botón WhatsApp (header, menú mobile y franja ¡Festejá en el Árbol!) |
 
 Los textos visibles del CTA ("WhatsApp" en el header, "Escribinos por WhatsApp" en el menú
 mobile) son textos de interfaz del theme; del menú solo se toma el destino (URL, pestaña nueva).
+
+El botón "volver arriba" es el de Astra (se activa en Personalizar → Scroll to Top); el theme solo le da el
+estilo del diseño (cuadrado tinta con flecha papel, 44px).
 
 El header, el menú mobile y el footer V1 se muestran en páginas con la plantilla
 **La Casa — Lienzo**; el resto de las páginas mantiene el header/footer de Astra por ahora.
@@ -110,3 +113,5 @@ WordPress imprime los `@font-face`; no hay pedidos a Google Fonts.
 - Sin lógica de eventos/ticketing en el theme: eso vive en el plugin `casa-eventos`.
   Contrato de markup compartido: `docs/implementation/event-markup-contract.md`.
 - WooCommerce y Payway se integrarán después.
+- Datos que no son del theme: eventos (entidad Evento de `casa-eventos`, única fuente), feed de Instagram (plugin
+  externo) y newsletter (proveedor externo). Ver `docs/implementation/content-ownership.md`.

@@ -1,6 +1,6 @@
 # Event markup contract (theme ↔ casa-eventos)
 
-**Status:** v0.4. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
+**Status:** v0.5. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`); 0.4.1 recorded the data-ownership decisions (`content-ownership.md`). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
 **Visual source of truth:** `docs/design/Final Design Handoff.md` §1.8–1.15, §2.2, §3, §4.
 
 ## Why this exists
@@ -145,6 +145,19 @@ Leave out an item whose value is missing. The remaining items share the width eq
 | `lcda-agenda-header` | Eyebrow + month `<h1>` + chips (Step 5) |
 | `lcda-filter-chips` / `lcda-filter-chip` | V1: static presentation (Step 5). Active chip gets `is-active` + `aria-current="true"`. No JS filtering in the theme. casa-eventos may later turn chips into links to real category URLs |
 
+## Source of truth and consumers
+
+The **Event entity (casa-eventos) is the single source of truth** for every event field below. The theme's contexts are views of it, never separate copies:
+
+| Consumer | Selection (implemented in casa-eventos, not the theme) | Card variant |
+|---|---|---|
+| Home "Eventos destacados del mes" | published Events with `featured_on_home` = true that are current/upcoming, nearest first; past events drop out automatically | `--featured` |
+| Agenda | published current/upcoming Events, chronological (month view) | `--full` |
+| Single Event | the Event itself | detail components |
+| "También en la agenda" | other upcoming Events | `--compact` |
+
+Editors never re-enter event data on the Home or Agenda pages. Details and the other integration boundaries (Instagram, newsletter) are in `content-ownership.md`.
+
 ## Data casa-eventos supplies per event (view data)
 
 Derived from the handoff's design data model (§5):
@@ -161,7 +174,7 @@ Derived from the handoff's design data model (§5):
 | poster (attachment: src, srcset, width, height, alt) | poster, all contexts |
 | permalink | card link |
 | CTA type + label ("Comprar entradas" \| "Reservar") + destination | primary CTA (same red style for both) |
-| featured (bool) | Home selection |
+| featured on Home (bool, e.g. `featured_on_home`) | Home selection, combined with "not past" |
 
 Not needed from data: burst color (CSS), aspect ratio (intrinsic image size), venue text in V1 ("La Casa del Árbol" / "Av. Córdoba 5217").
 

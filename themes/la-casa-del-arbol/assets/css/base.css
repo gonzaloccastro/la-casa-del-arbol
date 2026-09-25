@@ -206,6 +206,65 @@ img {
 	max-width: min(100% - 2 * var(--lcda-gutter), var(--lcda-wide-size));
 }
 
+/* Astra scroll-to-top (#ast-scroll-top) --------------------------------------
+   Astra keeps the behavior: it shows the control after scrolling, scrolls up
+   on click or Enter, and honors its Customizer device setting. That script
+   sets "display" and reads the element's "content" value, so neither is
+   touched here. Only the look changes: a square ink button with a paper
+   arrow, as the design's dark buttons. A 2px paper edge keeps it visible
+   over the ink footer. 44px square (touch target); it sits on the page
+   gutter. Hover keeps the same colors (V1 defines no button hover).
+   Selectors match Astra's own (#ast-scroll-top…) and load later, so they
+   win over its Customizer colors. */
+#ast-scroll-top,
+#ast-scroll-top:hover,
+#ast-scroll-top:focus {
+	box-sizing: border-box;
+	width: var(--lcda-hit-min);
+	height: var(--lcda-hit-min);
+	border: 2px solid var(--lcda-paper);
+	border-radius: 0;
+	background-color: var(--lcda-ink);
+	box-shadow: none;
+	color: var(--lcda-paper);
+	font-size: 16px;
+	line-height: 1;
+}
+
+#ast-scroll-top.ast-scroll-to-top-right {
+	right: var(--lcda-gutter);
+	bottom: var(--lcda-gutter);
+}
+
+#ast-scroll-top.ast-scroll-to-top-left {
+	bottom: var(--lcda-gutter);
+	left: var(--lcda-gutter);
+}
+
+#ast-scroll-top .ast-icon.icon-arrow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+}
+
+/* Astra's chevron points down; rotated it points up. */
+#ast-scroll-top .ast-icon.icon-arrow svg {
+	width: 18px;
+	height: auto;
+	margin: 0;
+	fill: currentColor;
+	transform: rotate(180deg);
+}
+
+/* Keyboard focus: ink ring + paper halo, readable over any section
+   (Astra sets "outline: inherit" on the control). */
+#ast-scroll-top:focus-visible {
+	outline: 2px solid var(--lcda-ink);
+	outline-offset: 0;
+	box-shadow: 0 0 0 4px var(--lcda-paper);
+}
+
 /* ==========================================================================
    3. Typography (Handoff §1.2)
    Display (Anton): H1, H2. UI (Archivo 900): H3–H6. Component-specific
