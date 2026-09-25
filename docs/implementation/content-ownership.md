@@ -10,7 +10,7 @@ The rule: **the theme owns presentation.** It owns section layout, headings, mar
 |---|---|---|---|
 | Event data (title, poster, date/time, category, entrada/access, ticket info, CTA, featured flag) | **Event entity** in the future `casa-eventos` plugin (with WooCommerce for stock/orders) | card, grid and detail markup + CSS (`event-markup-contract.md`) | presentational placeholder cards only |
 | Home "Eventos destacados del mes" | a **projection/query of Event data** | the section: heading, "Ver agenda" actions, grid container, rhythm | placeholder demo grid |
-| Agenda (archive) | a projection/query of Event data | page header, filter chip presentation, masonry | not built (Step 5) |
+| Agenda (archive) | a projection/query of Event data | page header, filter chip presentation, masonry | presentational page (0.5.0): demo cards + non-functional chips (`agenda-contract.md`) |
 | Single Event | the Event entity itself | detail layout and components | not built (Step 6) |
 | Instagram feed | an **external Instagram plugin** (likely Smash Balloon class), incl. authentication, API, retrieval, caching, feed data | the section: eyebrow, H2, "Seguir", outer frame and grid presentation | 6 static fixture images |
 | Newsletter signup | an **external email provider** (Mailchimp, Brevo… not chosen), incl. processing, validation, API, consent records, lists/audiences | the section: eyebrow, H2, form presentation | non-functional placeholder form |
@@ -25,7 +25,7 @@ The rule: **the theme owns presentation.** It owns section layout, headings, mar
   - order is chronological, nearest first;
   - past events drop out automatically, even if the flag stays on; nobody has to un-feature them;
   - the number shown and the empty state (no featured upcoming events) are decided with that implementation.
-- **Agenda** consumes the same Event data (published, current/upcoming, chronological, month grouping), not a separate list.
+- **Agenda** consumes the same Event data (published, current/upcoming, chronological, month grouping), not a separate list. Its demo cards (0.5.0) are placeholders like the Home ones; casa-eventos replaces the `lcda-event-grid--agenda` group and the `lcda-filter-chips` list, and the sections stay (`agenda-contract.md`).
 - **What gets replaced later:** only the event grid output inside the Home section (`lcda-event-grid--featured` and its cards). The section around it stays as the approved design: `lcda-section`, heading, "Ver agenda completa →", "Ver toda la agenda". `casa-eventos` renders the same card markup (`event-markup-contract.md`), so no visual redesign is needed.
 - **Until then:** the Home cards are placeholders from the demo grid pattern. They are **not** the future editing model. Editors must not treat the Home as the place to maintain event data. When `casa-eventos` exists, the placeholder grid is removed from the Home page and from the theme, and nothing is migrated from it.
 - The theme never registers event CPTs, meta, taxonomies or queries (CLAUDE.md, `event-markup-contract.md`).

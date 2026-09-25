@@ -32,9 +32,10 @@ function lcda_asset_version( $relative_path ) {
  * Neither Astra's style.css nor this theme's style.css holds any CSS (only
  * the theme header), so neither is enqueued. base.css loads after Astra's
  * main stylesheet so its resets win on equal specificity. components.css
- * (section heading, burst, tag, event card...) and home.css (hero, Festejá,
- * Instagram, newsletter) load on every page, because editors can insert
- * their patterns anywhere. The site chrome (header, mobile menu, footer) is
+ * (section heading, burst, tag, event card, filter chips...), home.css (hero,
+ * Festejá, Instagram, newsletter) and agenda.css (Agenda header and event
+ * wall sections) load on every page, because editors can insert their
+ * patterns anywhere. The site chrome (header, mobile menu, footer) is
  * only rendered on Lienzo pages, so its CSS and JS load only there.
  *
  * The hero carousel script is only registered here; inc/blocks.php enqueues
@@ -62,6 +63,13 @@ function lcda_enqueue_assets() {
 		LCDA_URI . '/assets/css/home.css',
 		array( 'lcda-components' ),
 		lcda_asset_version( 'assets/css/home.css' )
+	);
+
+	wp_enqueue_style(
+		'lcda-agenda',
+		LCDA_URI . '/assets/css/agenda.css',
+		array( 'lcda-components' ),
+		lcda_asset_version( 'assets/css/agenda.css' )
 	);
 
 	wp_register_script(

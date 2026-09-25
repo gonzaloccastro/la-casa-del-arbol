@@ -56,7 +56,9 @@ theme.json spacing presets. The **same variables** are used by the component CSS
 
 - Side padding is always 0: the container provides the gutter, also when the section has a background color. Core's padding for colored groups is overridden.
 - Consecutive sections touch; there is no margin between them.
-- Page-specific values (Agenda header 48/32 · 32/24, Agenda grid 40/64 · 28/40, Event main 28/64 · 20/40, Related 48/64 · 32/40) belong to the Step 5–6 patterns. They are set there with the presets above or with a modifier added then.
+- Page-specific values belong to the page patterns and are set with a section modifier that only changes `--lcda-section-space-top` / `--lcda-section-space-bottom`:
+  - Agenda header 48/32 · 32/24 → `lcda-agenda-header`; Agenda grid 40/64 · 28/40 → `lcda-agenda-events` (Step 5, `agenda.css`, `agenda-contract.md`).
+  - Event main 28/64 · 20/40 and Related 48/64 · 32/40 → Step 6.
 - An editor can still override a section's padding from the block sidebar, but only with presets.
 
 ## Top level of a Lienzo page
@@ -77,6 +79,7 @@ Components set only `margin-block`, never `margin-inline`, so they never undo th
 | Sección de texto | same + `.lcda-reading` with paragraphs | informative pages (Reservas, Alquilá, La Casa, Contacto) |
 | Encabezado de sección | `alignwide` section heading | inside a section, or directly on a page (container column) |
 | Home sections (Step 4): Carrusel de portada, Eventos destacados, ¡Festejá en el Árbol!, Seguinos en Instagram, Newsletter; and Home (página completa) | built on the rows above | see `home-contract.md` |
+| Agenda sections (Step 5): Agenda — Encabezado, Agenda — Mosaico de eventos; and Agenda (página completa) | built on the rows above | see `agenda-contract.md` |
 
 Two section-level primitives were added in Step 4 (`components.css`): `lcda-section-heading--band` (the heading is a band's whole content: text + action centered, gap L, no margin below) and `lcda-section-actions` (closing action row, 36 / 24 above it, the design's value for "Ver toda la agenda").
 

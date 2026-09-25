@@ -29,6 +29,8 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
   sello, etiqueta de categoría, tarjeta de evento, grillas de eventos, afiche y metadata del evento.
 - `assets/css/home.css` + `assets/js/hero-carousel.js` — secciones de la Home: carrusel de portada, franja
   Festejá, Instagram y newsletter. Contrato: `docs/implementation/home-contract.md`.
+- `assets/css/agenda.css` — secciones de la Agenda (encabezado con el mes y mosaico de eventos). Los chips de
+  categoría y el mosaico son componentes compartidos de `components.css`. Contrato: `docs/implementation/agenda-contract.md`.
 - `assets/css/chrome.css` + `assets/js/mobile-menu.js` — header, menú mobile y footer.
 - `assets/images/fixtures/` — **imágenes provisorias** (rectángulos grises rotulados) del carrusel y de Instagram
   hasta que haya fotos reales. Se borran cuando ninguna página las use (ver `home-contract.md`).
@@ -45,6 +47,10 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
   el texto alternativo), los afiches y textos de las tarjetas, las imágenes de Instagram (estilo "Reel de Instagram"
   para los reels) y la volanta del mes. Ajustes → Lectura → página de inicio estática = Home. Pasos completos en
   `docs/implementation/home-contract.md`.
+- **Agenda**: página `agenda` con plantilla Lienzo + patrón **La Casa del Árbol → Agenda (página completa)**.
+  Se edita el mes (título) cada mes. Las categorías son solo visuales (todavía no filtran) y las 9 tarjetas son
+  de demostración: los eventos reales se van a cargar desde Eventos (`casa-eventos`), que reemplaza el mosaico.
+  Detalle: `docs/implementation/agenda-contract.md`.
 - Botones: estilo por defecto = Primario rojo. Variantes en la barra lateral del bloque: Oscuro, Contorno, Enlace de texto.
   En mobile los botones pasan a ancho completo; agregar la clase `lcda-inline` para mantener uno en línea.
 - Armado de páginas (plantilla Lienzo): la página se compone con **secciones**. Cada sección trae el ancho,
@@ -65,6 +71,7 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - Secciones de la Home, también sueltas en **La Casa del Árbol**: Carrusel de portada · Eventos destacados del mes ·
   ¡Festejá en el Árbol! (WhatsApp) · Seguinos en Instagram · Newsletter (Comunidad). El newsletter todavía no
   envía nada (botón desactivado); Instagram son imágenes fijas, sin conexión con Instagram.
+- Secciones de la Agenda, también sueltas en **La Casa del Árbol**: Agenda — Encabezado · Agenda — Mosaico de eventos.
 - Párrafo → estilo **Sticker (estrella)**: estrella menta con un texto corto (por ejemplo "A la gorra").
 - Los afiches se muestran completos, con su proporción original (nunca se recortan).
 
