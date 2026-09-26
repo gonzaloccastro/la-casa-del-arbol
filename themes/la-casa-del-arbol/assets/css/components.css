@@ -29,7 +29,7 @@
  *   4. Category tag
  *   5. Event card
  *   6. Event grids (featured · agenda · related)
- *   7. Event detail poster
+ *   7. Event detail (Single Event: poster, info column, description)
  *   8. Event metadata
  *   9. Event CTA row and back link
  *  10. Filter chips (Step 5)
@@ -710,10 +710,131 @@ body .lcda-event-grid--agenda > * {
 }
 
 /* ==========================================================================
-   7. Event detail poster (Handoff §4.1)
-   Native-ratio poster in a 2px ink frame; the burst (always mint) breaks
-   out of the top-left corner. The two-column detail layout is Step 6.
+   7. Event detail (Handoff §4.1): the Single Event poster + info
+   .lcda-event-detail: poster column .85fr + info column 1.15fr, 56px
+   apart (desktop and tablet); mobile: stacked, poster first, 24px.
+   Poster: native ratio in a 2px ink frame; the burst (always mint) breaks
+   out of the top-left corner. Info column, top to bottom: tag, title (the
+   page's H1), metadata, description (editorial blocks), secondary
+   paragraph, [future ticket selector], CTA row. Each part sets only its
+   space above, so any optional part can be left out. Markup contract:
+   docs/implementation/single-event-contract.md.
    ========================================================================== */
+
+body .lcda-event-detail {
+	display: grid;
+	grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+	align-items: start;
+	gap: 56px;
+	margin-block: 0;
+}
+
+body .lcda-event-detail > * {
+	margin: 0;
+}
+
+.lcda-event-detail__info {
+	min-width: 0;
+}
+
+body .lcda-event-detail__info > * {
+	margin-block: 0;
+}
+
+/* Spacing inside the info column (design values, desktop / mobile):
+   tag → title 18 / 14, title → meta 24 / 20, meta → description 28 / 24,
+   description → secondary 16 / 14, → CTA row 32 / 26. */
+body .lcda-event-detail__info > .lcda-event-detail__title {
+	margin-block-start: 18px;
+}
+
+body .lcda-event-detail__info > .lcda-event-meta {
+	margin-block-start: 24px;
+}
+
+body .lcda-event-detail__info > .lcda-event-detail__description {
+	margin-block-start: 28px;
+}
+
+body .lcda-event-detail__info > .lcda-event-detail__secondary {
+	margin-block-start: 16px;
+}
+
+body .lcda-event-detail__info > :is(.lcda-event-cta, .lcda-ticket-types) {
+	margin-block-start: 32px;
+}
+
+body .lcda-event-detail__info > .lcda-ticket-types + .lcda-event-cta {
+	margin-block-start: 16px;
+}
+
+body .lcda-event-detail__info > :first-child {
+	margin-block-start: 0;
+}
+
+/* Title: size and line-height come from the global H1 (Handoff §1.2:
+   clamp(2.2rem, 4.6vw, 4rem) / .95; mobile 2.1rem / .98). */
+.lcda-event-detail__title {
+	overflow-wrap: break-word;
+}
+
+/* Description: the event's editorial content (paragraphs, headings below
+   the H1, lists, links, emphasis). Work Sans 16.5 / 1.7, 56ch measure. */
+.lcda-event-detail__description {
+	max-width: 56ch;
+	font-family: var(--lcda-font-body);
+	font-size: 16.5px;
+	line-height: 1.7;
+	overflow-wrap: break-word;
+}
+
+body .lcda-event-detail__description > * {
+	margin-block: 0;
+}
+
+body .lcda-event-detail__description > * + * {
+	margin-block-start: 16px;
+}
+
+body .lcda-event-detail__description > :is(h2, h3, h4, h5, h6) {
+	margin-block-start: 28px;
+	line-height: 1.1;
+}
+
+body .lcda-event-detail__description > :is(h2, h3, h4, h5, h6) + * {
+	margin-block-start: 10px;
+}
+
+/* Headings inside the description stay below the H1 and the section H2s. */
+body .lcda-event-detail__description > h2 {
+	font-size: 1.6rem;
+}
+
+body .lcda-event-detail__description > :is(h3, h4, h5, h6) {
+	font-size: 1rem;
+}
+
+/* Lists: Astra's 3em left margin is replaced by a small indent. */
+body .lcda-event-detail__description > :is(ul, ol) {
+	margin-inline: 0;
+	padding-inline-start: 1.25em;
+}
+
+body .lcda-event-detail__description li + li {
+	margin-block-start: 4px;
+}
+
+.lcda-event-detail__description :is(img, video, iframe) {
+	max-width: 100%;
+	height: auto;
+}
+
+.lcda-event-detail__secondary {
+	color: var(--lcda-body-soft);
+	font-family: var(--lcda-font-body);
+	font-size: 15px;
+	line-height: 1.6;
+}
 
 .lcda-event-detail__poster {
 	border: var(--lcda-rule);
@@ -731,6 +852,53 @@ body .lcda-event-detail__burst {
 }
 
 @media (max-width: 767px) {
+	body .lcda-event-detail {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 24px;
+	}
+
+	body .lcda-event-detail__info > .lcda-event-detail__title {
+		margin-block-start: 14px;
+	}
+
+	body .lcda-event-detail__info > .lcda-event-meta {
+		margin-block-start: 20px;
+	}
+
+	body .lcda-event-detail__info > .lcda-event-detail__description {
+		margin-block-start: 24px;
+	}
+
+	body .lcda-event-detail__info > .lcda-event-detail__secondary {
+		margin-block-start: 14px;
+	}
+
+	body .lcda-event-detail__info > :is(.lcda-event-cta, .lcda-ticket-types) {
+		margin-block-start: 26px;
+	}
+
+	body .lcda-event-detail__info > :first-child {
+		margin-block-start: 0;
+	}
+
+	.lcda-event-detail__description {
+		font-size: 15px;
+		line-height: 1.65;
+	}
+
+	body .lcda-event-detail__description > * + * {
+		margin-block-start: 14px;
+	}
+
+	body .lcda-event-detail__description > h2 {
+		font-size: 1.4rem;
+	}
+
+	.lcda-event-detail__secondary {
+		font-size: 13.5px;
+		line-height: 1.55;
+	}
+
 	body .lcda-event-detail__burst {
 		--lcda-burst-size: 58px;
 		--lcda-burst-font: 18px;
@@ -854,6 +1022,21 @@ body .lcda-event-cta {
 		display: block;
 		width: 100%;
 		padding-inline: 16px;
+	}
+
+	/* Mobile sizes of the approved screen: primary 14px, Compartir 13px. */
+	.lcda-event-cta .wp-block-button .wp-block-button__link,
+	.lcda-event-cta .wp-block-button .wp-block-button__link:is(:hover, :focus),
+	.lcda-event-cta :is(a, button).lcda-btn,
+	.lcda-event-cta :is(a, button).lcda-btn:is(:hover, :focus) {
+		font-size: 14px;
+	}
+
+	.lcda-event-cta .wp-block-button.is-style-lcda-outline .wp-block-button__link,
+	.lcda-event-cta .wp-block-button.is-style-lcda-outline .wp-block-button__link:is(:hover, :focus),
+	.lcda-event-cta :is(a, button).lcda-btn--outline,
+	.lcda-event-cta :is(a, button).lcda-btn--outline:is(:hover, :focus) {
+		font-size: 13px;
 	}
 }
 

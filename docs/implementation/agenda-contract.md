@@ -89,7 +89,7 @@ Known trade-off: the column-major reading order. With many events, column 1 hold
 
 - **What is replaced:** the `.lcda-event-grid--agenda` group inside `section.lcda-agenda-events`, and the `ul.lcda-filter-chips` list inside the header. casa-eventos outputs current/upcoming published Events, chronological, as `article.lcda-event-card.lcda-event-card--full` cards into the same grid class (`event-markup-contract.md`: `<time datetime>`, `aria-hidden` burst/stamp, one stretched link per card, `<h2>` titles, poster `<img>` with real width/height).
 - **What stays:** both sections, their rhythm, the eyebrow, the chip and card styling, and the masonry CSS. No visual redesign is needed.
-- The month H1 is editorial copy until casa-eventos provides the month (then it can be rendered by the plugin, or stay editorial if the Agenda keeps a monthly heading).
+- The month H1 is editorial copy until casa-eventos provides the month (see "Dynamic month behavior" below).
 - When casa-eventos lands, delete `demo-event-grid-agenda.php` from the theme and remove the demo grid from the Agenda page. Nothing is migrated from it.
 - Empty state (no upcoming events), month grouping, paging for very long months, and the actual filtering are casa-eventos decisions and are not designed in V1.
 
@@ -116,6 +116,17 @@ Title, subtitle, date/time (burst day, meta, `<time>`), category and its color, 
 - Filters: honest non-interactive list (above). No false control semantics.
 - No motion, no animation and no JavaScript on the Agenda. Nothing to adapt for reduced motion.
 - Touch targets: the only interactive elements are the card links (the whole card) and the chrome, which is already approved. Future link chips get a 44px hit area.
+
+## Dynamic month behavior (product decision, 2026-09-25; not implemented)
+
+Recorded after the Agenda V1 live QA, for the casa-eventos implementation. The V1 page is unchanged.
+
+- The Agenda shows **one month at a time**.
+- The selected month is the page's large `<h1>` (today's `lcda-agenda-header__title`).
+- In the dynamic Agenda, casa-eventos **selects the current month automatically**; editors no longer edit the month by hand.
+- **Previous / next month navigation** may appear as secondary, visually subordinate information around or below the main month. It needs a small design treatment when it is built; it must not compete with the H1.
+- Month navigation is useful but **not a V1 blocker**. If it adds unnecessary complexity during the casa-eventos implementation, automatic current-month rendering takes priority, and navigation comes later.
+- Implication for the replacement boundary: in the dynamic version the H1 text is also plugin output, rendered into the same `lcda-agenda-header__title` element. The eyebrow stays editorial or template text.
 
 ## Deviations and assumptions
 

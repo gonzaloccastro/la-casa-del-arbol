@@ -11,7 +11,7 @@ The rule: **the theme owns presentation.** It owns section layout, headings, mar
 | Event data (title, poster, date/time, category, entrada/access, ticket info, CTA, featured flag) | **Event entity** in the future `casa-eventos` plugin (with WooCommerce for stock/orders) | card, grid and detail markup + CSS (`event-markup-contract.md`) | presentational placeholder cards only |
 | Home "Eventos destacados del mes" | a **projection/query of Event data** | the section: heading, "Ver agenda" actions, grid container, rhythm | placeholder demo grid |
 | Agenda (archive) | a projection/query of Event data | page header, filter chip presentation, masonry | presentational page (0.5.0): demo cards + non-functional chips (`agenda-contract.md`) |
-| Single Event | the Event entity itself | detail layout and components | not built (Step 6) |
+| Single Event | the Event entity itself; the description is the Event's own block content | detail layout and components, section headings, the future template's layout | presentational demo page for QA (0.6.0), CTA and Compartir without destinations (`single-event-contract.md`) |
 | Instagram feed | an **external Instagram plugin** (likely Smash Balloon class), incl. authentication, API, retrieval, caching, feed data | the section: eyebrow, H2, "Seguir", outer frame and grid presentation | 6 static fixture images |
 | Newsletter signup | an **external email provider** (Mailchimp, Brevo… not chosen), incl. processing, validation, API, consent records, lists/audiences | the section: eyebrow, H2, form presentation | non-functional placeholder form |
 | Navigation, footer "Navegación" / "Visitanos", WhatsApp URL | **WordPress menus** (Appearance → Menus) | rendering of the menu locations | live |

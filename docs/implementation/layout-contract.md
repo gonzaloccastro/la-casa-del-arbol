@@ -58,7 +58,7 @@ theme.json spacing presets. The **same variables** are used by the component CSS
 - Consecutive sections touch; there is no margin between them.
 - Page-specific values belong to the page patterns and are set with a section modifier that only changes `--lcda-section-space-top` / `--lcda-section-space-bottom`:
   - Agenda header 48/32 · 32/24 → `lcda-agenda-header`; Agenda grid 40/64 · 28/40 → `lcda-agenda-events` (Step 5, `agenda.css`, `agenda-contract.md`).
-  - Event main 28/64 · 20/40 and Related 48/64 · 32/40 → Step 6.
+  - Event main → `lcda-event-main`: the back link is its first child, so it is 24/64 · 18/40 with the detail 28 (mobile 20) below the link, which renders the design's 28/64 · 20/40 plus its back-link row. Related 48/64 · 32/40 → `lcda-event-related` (Step 6, `event.css`, `single-event-contract.md`).
 - An editor can still override a section's padding from the block sidebar, but only with presets.
 
 ## Top level of a Lienzo page
@@ -80,6 +80,7 @@ Components set only `margin-block`, never `margin-inline`, so they never undo th
 | Encabezado de sección | `alignwide` section heading | inside a section, or directly on a page (container column) |
 | Home sections (Step 4): Carrusel de portada, Eventos destacados, ¡Festejá en el Árbol!, Seguinos en Instagram, Newsletter; and Home (página completa) | built on the rows above | see `home-contract.md` |
 | Agenda sections (Step 5): Agenda — Encabezado, Agenda — Mosaico de eventos; and Agenda (página completa) | built on the rows above | see `agenda-contract.md` |
+| Evento (página de demostración) (Step 6, category Demo) | two sections on the rows above | visual QA only, see `single-event-contract.md` |
 
 Two section-level primitives were added in Step 4 (`components.css`): `lcda-section-heading--band` (the heading is a band's whole content: text + action centered, gap L, no margin below) and `lcda-section-actions` (closing action row, 36 / 24 above it, the design's value for "Ver toda la agenda").
 

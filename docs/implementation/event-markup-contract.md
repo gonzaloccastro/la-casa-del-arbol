@@ -1,6 +1,6 @@
 # Event markup contract (theme ↔ casa-eventos)
 
-**Status:** v0.6. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`); 0.4.1 recorded the data-ownership decisions (`content-ownership.md`); Step 5 (0.5.0) built the Agenda on the agenda demo grid and the filter chips (`agenda-contract.md`). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
+**Status:** v0.7. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`); 0.4.1 recorded the data-ownership decisions (`content-ownership.md`); Step 5 (0.5.0) built the Agenda on the agenda demo grid and the filter chips (`agenda-contract.md`); Step 6 (0.6.0) built the Single Event detail (`single-event-contract.md`, which holds the full page markup). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
 **Visual source of truth:** `docs/design/Final Design Handoff.md` §1.8–1.15, §2.2, §3, §4.
 
 ## Why this exists
@@ -112,19 +112,19 @@ Core-block equivalent (demo patterns): the same classes on core blocks: group (`
 
 | Class | Notes | Built in |
 |---|---|---|
-| `lcda-event-detail` | 2-col `.85fr 1.15fr` → stacked (poster first) | Step 6 |
+| `lcda-event-detail` | `<article>`. 2-col `.85fr 1.15fr`, gap 56 (desktop and tablet) → stacked, poster first, gap 24 | Step 6 |
 | `lcda-event-detail__poster` | Native-ratio poster, 2px ink frame, 4:5 placeholder when empty | Step 3 |
 | `lcda-burst lcda-event-detail__burst` | Always mint, breaks out of the poster corner (−14px; mobile −12px). Child of `__poster`. | Step 3 |
-| `lcda-event-detail__info` | | Step 6 |
+| `lcda-event-detail__info` | Tag, title, meta, description, secondary, [`lcda-ticket-types`], CTA row. Each part sets only its space above, so optional parts can be left out | Step 6 |
 | `lcda-tag lcda-tag--large` + color modifier | | Step 3 |
 | `lcda-event-detail__title` | The page's single `<h1>` | Step 6 |
 | `lcda-event-meta` | Cuándo / Dónde / Entrada: equal columns → label/value rows | Step 3 |
 | `lcda-event-meta__item`, `__label`, `__value` | `<dl>` > `<div class="…__item">` > `<dt class="…__label">` + `<dd class="…__value">` | Step 3 |
-| `lcda-event-detail__description` | Body paragraph, max 56ch | Step 6 |
-| `lcda-event-detail__secondary` | Secondary paragraph | Step 6 |
-| `lcda-event-cta` | CTA row: primary + "Compartir". Plugin: `<a class="lcda-btn">` (Comprar entradas / Reservar, same red style for both) + `<a\|button class="lcda-btn lcda-btn--outline">`. Editor: class on a Buttons block. Mobile: stacked, full width. | Step 3 |
+| `lcda-event-detail__description` | The Event's editorial block content (paragraphs, h2–h6, lists, links, emphasis). Work Sans 16.5/1.7, max 56ch | Step 6 |
+| `lcda-event-detail__secondary` | Secondary paragraph (bajada), `#5a5a5a` | Step 6 |
+| `lcda-event-cta` | CTA row: primary + "Compartir". Plugin: `<a class="lcda-btn">` (Comprar entradas / Reservar, same red style for both) + `<a\|button class="lcda-btn lcda-btn--outline">`. Editor: class on a Buttons block. Mobile: stacked, full width (primary 14px, Compartir 13px since Step 6). | Step 3 |
 | `lcda-back-link` | "← Volver a la agenda" | Step 3 |
-| `lcda-ticket-types` | **Reserved.** Not part of V1 visuals; for future ticket-type display | — |
+| `lcda-ticket-types` | **Reserved.** Not part of V1 visuals. Future ticket selector (ticket mode only), placed right before `lcda-event-cta` in the info column; spacing already defined, look not designed (`single-event-contract.md`) | — |
 
 Metadata reference markup:
 
@@ -187,6 +187,7 @@ Theme patterns that hold static demo events. casa-eventos makes them obsolete, a
 |---|---|---|
 | Grilla de eventos — Destacados (demo): 4 featured cards. Also included by `home-featured-events.php` (Home), so the Home cards are the same demo markup | `patterns/demo-event-grid-featured.php` | Step 3.1 |
 | Grilla de eventos — Agenda (demo): 9 full cards, `<h2>` titles (Step 5; 3 cards with `<h3>` before). Also included by `agenda-events.php` (Agenda) | `patterns/demo-event-grid-agenda.php` | Step 3.1 |
-| Grilla de eventos — Relacionados (demo): 3 compact cards | `patterns/demo-event-grid-related.php` | Step 3.1 |
+| Grilla de eventos — Relacionados (demo): 3 compact cards. Also included by `demo-event-page.php` | `patterns/demo-event-grid-related.php` | Step 3.1 |
+| Evento (página de demostración): the whole Single Event screen for visual QA (main section + related section). Not a starter pattern: events are never authored as pages | `patterns/demo-event-page.php` | Step 6 |
 
 They hold placeholder text only ("Título del evento", "Día · 00:00", "00") and empty image slots. No event data and no artwork ship in the theme. Step 3's single-card demo patterns (`demo-event-card-*`) were removed in Step 3.1: a card inserted on its own landed in the reading column, which is not a layout the design uses. Cards already inserted from them keep working, because styling depends only on classes.

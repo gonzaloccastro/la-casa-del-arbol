@@ -1,0 +1,86 @@
+/**
+ * La Casa del Árbol — Single Event page sections (Design V1, Step 6).
+ *
+ * Source of truth: docs/design/Final Design Handoff.md §4 (Single Event),
+ * §1.3 and Website Direction.dc.html screens "03 Single Event" (desktop and
+ * mobile). Contract: docs/implementation/single-event-contract.md.
+ *
+ * The page is two ordinary lcda-section > lcda-container blocks (layout
+ * contract). This file only sets each section's vertical rhythm and the
+ * related-events heading. The detail layout, poster, metadata, CTA row,
+ * back link and cards are shared components (components.css §5–9).
+ *
+ * Same rules as components.css: style by lcda-* classes, "body" prefix to
+ * beat core's layout margins, margin-block only, spacing from the
+ * --lcda-space-* scale where the design uses one. Loaded on every
+ * front-end page and in the block editor.
+ *
+ * Contents
+ *   1. Event main section (back link + detail)
+ *   2. "También en la agenda" section
+ */
+
+/* ==========================================================================
+   1. Event main section (Handoff §4.1)
+   The design puts the back link in its own row (24px above it; mobile 18)
+   and the detail 28px below it (mobile 20), with 64 / 40 at the bottom.
+   Here the back link is the section's first child, so the section's top
+   padding is the row's 24 / 18: preset M on desktop, preset L on mobile
+   (18). Bottom: preset 2XL (64 / 40). Back link → detail 28 / 20 are
+   design values, not on the scale.
+   ========================================================================== */
+
+.lcda-event-main {
+	--lcda-section-space-top: var(--lcda-space-30);
+	--lcda-section-space-bottom: var(--lcda-space-60);
+}
+
+body .lcda-event-main .lcda-container > * {
+	margin-block: 0;
+}
+
+body .lcda-event-main .lcda-back-link + * {
+	margin-block-start: 28px;
+}
+
+@media (max-width: 767px) {
+	.lcda-event-main {
+		--lcda-section-space-top: var(--lcda-space-40);
+	}
+
+	body .lcda-event-main .lcda-back-link + * {
+		margin-block-start: 20px;
+	}
+}
+
+/* ==========================================================================
+   2. "También en la agenda" (Handoff §4.2)
+   Section rhythm 48 / 64, mobile 32 / 40: presets XL and 2XL. The heading
+   is smaller than a regular section H2 ("Título chico" size preset,
+   clamp(1.6rem, 3vw, 2.2rem); mobile 1.4rem) and sits 24px above the cards
+   (mobile 18): preset M, preset L on mobile. The grid is
+   lcda-event-grid--related (components.css §6).
+   ========================================================================== */
+
+.lcda-event-related {
+	--lcda-section-space-top: var(--lcda-space-50);
+	--lcda-section-space-bottom: var(--lcda-space-60);
+}
+
+body .lcda-event-related .lcda-section-heading {
+	margin-block-end: var(--lcda-space-30);
+}
+
+body .lcda-event-related .lcda-section-heading__title {
+	font-size: var(--wp--preset--font-size--large, clamp(1.6rem, 3vw, 2.2rem));
+}
+
+@media (max-width: 767px) {
+	body .lcda-event-related .lcda-section-heading {
+		margin-block-end: var(--lcda-space-40);
+	}
+
+	body .lcda-event-related .lcda-section-heading__title {
+		font-size: 1.4rem;
+	}
+}

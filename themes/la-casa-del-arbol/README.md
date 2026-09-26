@@ -31,6 +31,9 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
   Festejá, Instagram y newsletter. Contrato: `docs/implementation/home-contract.md`.
 - `assets/css/agenda.css` — secciones de la Agenda (encabezado con el mes y mosaico de eventos). Los chips de
   categoría y el mosaico son componentes compartidos de `components.css`. Contrato: `docs/implementation/agenda-contract.md`.
+- `assets/css/event.css` — secciones de la página de evento (principal y "También en la agenda"). El detalle
+  (afiche, datos, descripción, botones) es componente compartido de `components.css`. Contrato:
+  `docs/implementation/single-event-contract.md`.
 - `assets/css/chrome.css` + `assets/js/mobile-menu.js` — header, menú mobile y footer.
 - `assets/images/fixtures/` — **imágenes provisorias** (rectángulos grises rotulados) del carrusel y de Instagram
   hasta que haya fotos reales. Se borran cuando ninguna página las use (ver `home-contract.md`).
@@ -51,6 +54,10 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
   Se edita el mes (título) cada mes. Las categorías son solo visuales (todavía no filtran) y las 9 tarjetas son
   de demostración: los eventos reales se van a cargar desde Eventos (`casa-eventos`), que reemplaza el mosaico.
   Detalle: `docs/implementation/agenda-contract.md`.
+- **Página de evento**: todavía no se cargan eventos. Para revisar el diseño hay un patrón de demostración,
+  **La Casa del Árbol — Demo → Evento (página de demostración)**, para una única página de prueba con plantilla
+  Lienzo. No es la forma de cargar eventos: con `casa-eventos` cada evento se carga en Eventos y la página de prueba
+  se borra. "Comprar entradas" / "Reservar" y "Compartir" son solo visuales (sin destino).
 - Botones: estilo por defecto = Primario rojo. Variantes en la barra lateral del bloque: Oscuro, Contorno, Enlace de texto.
   En mobile los botones pasan a ancho completo; agregar la clase `lcda-inline` para mantener uno en línea.
 - Armado de páginas (plantilla Lienzo): la página se compone con **secciones**. Cada sección trae el ancho,
