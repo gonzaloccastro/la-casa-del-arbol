@@ -1,0 +1,86 @@
+/* Casa Eventos: admin list and editor panels. */
+
+.column-casa_poster {
+	width: 56px;
+}
+
+.casa-eventos-thumb {
+	display: block;
+	width: 48px;
+	height: 60px;
+	object-fit: cover;
+}
+
+.casa-eventos-thumb--empty {
+	background: #e7e3d9;
+}
+
+.column-casa_start {
+	width: 12em;
+}
+
+.casa-eventos-muted {
+	color: #646970;
+}
+
+.casa-eventos-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	border: 1px solid currentColor;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.casa-eventos-badge--active {
+	color: #00733c;
+}
+
+.casa-eventos-badge--paused {
+	color: #8a5a00;
+}
+
+.casa-eventos-badge--cancelled {
+	color: #b32d2e;
+}
+
+.casa-eventos-badge--finished,
+.casa-eventos-badge--draft,
+.casa-eventos-badge--scheduled {
+	color: #50575e;
+}
+
+.casa-eventos-warning {
+	color: #b32d2e;
+	font-weight: 600;
+}
+
+.casa-eventos-featured {
+	color: #8a5a00;
+}
+
+.casa-eventos-swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border: 1px solid #1d2327;
+	vertical-align: middle;
+}
+
+.casa-eventos-swatch--mint {
+	background: #b8ddbf;
+}
+
+.casa-eventos-swatch--yellow {
+	background: #f2c45e;
+}
+
+.casa-eventos-panel .components-base-control + .components-base-control,
+.casa-eventos-panel .components-notice {
+	margin-top: 16px;
+}
+
+.casa-eventos-panel__note {
+	margin: 12px 0 0;
+	color: #646970;
+	font-size: 12px;
+}
