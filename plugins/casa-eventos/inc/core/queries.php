@@ -59,6 +59,7 @@ final class Queries {
 	 *     @type int      $limit             Maximum events; 0 = no limit.
 	 *     @type int[]    $exclude           Event IDs to leave out.
 	 *     @type bool     $include_cancelled Include cancelled events (they stay public).
+	 *     @type bool     $include_paused    Include paused events (they stay public).
 	 *     @type string   $category          Category slug; '' = all.
 	 *     @type int|null $timestamp         Now (unix); defaults to time().
 	 * }
@@ -70,15 +71,23 @@ final class Queries {
 				'limit'             => 0,
 				'exclude'           => array(),
 				'include_cancelled' => true,
+				'include_paused'    => true,
 				'category'          => '',
 				'timestamp'         => null,
 			),
 			$args
 		);
 
-		$meta = array( self::listed_clause(), self::not_finished_clause( $args['timestamp'] ) );
+		$meta     = array( self::listed_clause(), self::not_finished_clause( $args['timestamp'] ) );
+		$excluded = array();
+		if ( ! $args['include_paused'] ) {
+			$excluded[] = STATUS_PAUSED;
+		}
 		if ( ! $args['include_cancelled'] ) {
-			$meta[] = self::not_cancelled_clause();
+			$excluded[] = STATUS_CANCELLED;
+		}
+		if ( $excluded ) {
+			$meta[] = self::status_not_in_clause( $excluded );
 		}
 
 		$extra = array();
@@ -93,9 +102,9 @@ final class Queries {
 	}
 
 	/**
-	 * Related events for an event. PROVISIONAL default (the related rule is
-	 * an E2 decision): other upcoming listed events, not cancelled, nearest
-	 * first.
+	 * Related events for an event ("También en la agenda"): other upcoming
+	 * listed events that are neither paused nor cancelled, nearest first.
+	 * Finished and unlisted events never qualify (upcoming_events).
 	 *
 	 * @param Event|int $event Event or ID.
 	 * @param array     $args  { @type int $limit, @type int|null $timestamp }.
@@ -109,6 +118,7 @@ final class Queries {
 				'limit'             => (int) $args['limit'],
 				'exclude'           => array( $id ),
 				'include_cancelled' => false,
+				'include_paused'    => false,
 				'timestamp'         => $args['timestamp'],
 			)
 		);
@@ -147,17 +157,21 @@ final class Queries {
 
 	/**
 	 * The nearest month before or after a month that has listed published
-	 * events (historical months included).
+	 * events (historical months included; empty months are skipped). With a
+	 * category, only events of that category count (same category rule as
+	 * month_events()).
 	 *
 	 * @param string $ym        'YYYY-MM'.
 	 * @param int    $direction 1 = next, -1 = previous.
+	 * @param array  $args      { @type string $category Category slug; '' = all. }.
 	 * @return string|null 'YYYY-MM', or null when there is none.
 	 */
-	public static function adjacent_event_month( $ym, $direction ) {
+	public static function adjacent_event_month( $ym, $direction, array $args = array() ) {
 		$bounds = month_bounds( $ym );
 		if ( null === $bounds ) {
 			return null;
 		}
+		$args   = array_merge( array( 'category' => '' ), $args );
 		$next   = (int) $direction >= 0;
 		$clause = array(
 			'key'     => META_START,
@@ -165,6 +179,10 @@ final class Queries {
 			'compare' => $next ? '>=' : '<',
 			'type'    => 'CHAR',
 		);
+		$extra  = array();
+		if ( '' !== (string) $args['category'] ) {
+			$extra['tax_query'] = self::category_tax_query( $args['category'] ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		}
 
 		$events = self::run(
 			array( self::listed_clause(), 'start_local' => $clause ),
@@ -172,9 +190,30 @@ final class Queries {
 				'start_local' => $next ? 'ASC' : 'DESC',
 				'ID'          => $next ? 'ASC' : 'DESC',
 			),
-			1
+			1,
+			$extra
 		);
 		return $events ? $events[0]->month() : null;
+	}
+
+	/**
+	 * Validate a 'YYYY-MM' month key (the rule of every month argument here).
+	 *
+	 * @param mixed $raw Month key, e.g. from a request.
+	 * @return string|null Canonical 'YYYY-MM', or null when invalid.
+	 */
+	public static function parse_month( $raw ) {
+		return parse_month( $raw );
+	}
+
+	/**
+	 * Every event category, in chip order. Terms only: which of them a view
+	 * shows is the caller's decision.
+	 *
+	 * @return \WP_Term[]
+	 */
+	public static function categories() {
+		return categories( false );
 	}
 
 	/**
@@ -390,6 +429,10 @@ final class Queries {
 				$extra
 			)
 		);
+
+		// Posters: one query for every listed event's featured image, instead
+		// of one per card when the frontend renders them.
+		update_post_thumbnail_cache( $query );
 
 		$events = array();
 		foreach ( $query->posts as $post ) {

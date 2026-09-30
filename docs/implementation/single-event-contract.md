@@ -1,9 +1,48 @@
 # Single Event contract (presentation for casa-eventos)
 
-**Status:** v1, Step 6 (theme 0.6.0). CSS: `assets/css/components.css` §7 (detail layout, info column, description), §8 (metadata), §9 (CTA row, back link), §5–6 (compact cards, related grid), and `assets/css/event.css` (the two page sections). Demo fixture: `patterns/demo-event-page.php` (+ `demo-event-grid-related.php`). No JavaScript, no PHP render filter, no template file.
+**Status:** v2.1, E2 complete (theme 0.7.0 with casa-eventos 0.2.0, 2026-09-29): real Events render through `single-casa_evento.php` since E2.1 (2026-09-28; see "Dynamic implementation (E2.1)" below); the demo patterns were deleted in E2.4. v1 was Step 6 (theme 0.6.0). CSS: `assets/css/components.css` §7 (detail layout, info column, description), §8 (metadata), §9 (CTA row, back link), §5–6 (compact cards, related grid), and `assets/css/event.css` (the two page sections). Demo fixture (0.6.0; deleted in E2.4): `patterns/demo-event-page.php` (+ `demo-event-grid-related.php`). No JavaScript and no PHP render filter; the template is `single-casa_evento.php` + `template-parts/event/`.
 **Design source:** `docs/design/Final Design Handoff.md` §4 (Single Event), §1.8, §1.10, §1.12–1.16, §1.20–1.21; `Website Direction.dc.html` screens "03 Single Event" (desktop and mobile). Ownership: `content-ownership.md`. Card and metadata markup: `event-markup-contract.md`. Future business rules: `ticketing-v1-contract.md` (context only; nothing implemented).
 
 This document is the **presentational contract** that casa-eventos will populate. The theme owns the markup shape, the classes and the CSS. The Event entity owns every value.
+
+## Dynamic implementation (E2.1)
+
+`/evento/{slug}/` renders the approved design from the casa-eventos Event. The sections below keep describing the markup; this section records how the live page fills it.
+
+**Files (theme):**
+- `single-casa_evento.php`: the same frame as the Lienzo template (`<main class="site-main lcda-canvas">` > `.lcda-canvas__content`).
+- `template-parts/event/detail.php`: the main section.
+- `template-parts/event/related.php`: "También en la agenda".
+- `template-parts/event/card.php`: the event card, variants featured, full and compact; E2.1 uses compact.
+- `inc/events.php`: formatting, wording, CTA wording and destination.
+- `inc/astra.php`: `lcda_is_canvas()` also covers event singles.
+- `inc/assets.php`: `event.css` is scoped.
+
+**Plugin API used (only):** `Event::get()`, the read-model getters, `Event::cta()`, `Queries::related_events()`, `Queries::current_month()`, `POST_TYPE`.
+
+**Chrome:**
+- La Casa header and footer, full-width layout (`ast-page-builder-template`), body class `lcda-canvas-page`, chrome CSS and `mobile-menu.js`.
+- No Astra title, featured image, sidebar, post meta, navigation, comments or author box. The template never calls Astra's loop.
+- Posters are a bare `<img class="lcda-event-card__image">`. Astra shadows images outside a `<figure>` on single views (`.ast-article-single img:not(figure img)`), so `components.css` resets `box-shadow` for poster images.
+
+| Element | Source → output |
+|---|---|
+| Back link | the published page with slug `agenda`. `/agenda/?mes=YYYY-MM` when the event's month (local start) is not the current venue month, else `/agenda/`. No Agenda page → the back link is left out (no invented URL). |
+| Poster | the featured image via `wp_get_attachment_image( 'full' )`: intrinsic width/height, `sizes="(max-width: 767px) 100vw, 580px"`, `fetchpriority="high"`, no `loading`. Alt = the attachment's alt (empty is fine, never the title). No poster → no `<img>`, 4:5 placeholder frame. |
+| Burst | local start day, `d` ("05"), `aria-hidden`. |
+| Category | `Event::category()` name in `lcda-tag lcda-tag--large`, plus `lcda-tag--yellow` when the category color is yellow. No category → no tag. |
+| H1 | the event title (the page's only `<h1>`). |
+| Cuándo | Start only: `Sábado 05/09 · 21:00hs`. Declared end, same day: `Sábado 05/09 · 21:00 → 23:30hs`. Declared end on another day: `Viernes 30/10 · 21:00hs → Lunes 02/11 · 03:00hs`. Each instant is a `<time datetime>` with its ISO offset. The arrow is `aria-hidden`, with "hasta" for screen readers. The derived default end (start + 3 h) is a state rule and is never shown (decision N7). Formatting: `wp_date()` in the event timezone. |
+| Dónde | `Event::venue_address()` ("Av. Córdoba 5217"). |
+| Entrada | the entry label, if any. Else free → "Entrada libre", gorra → "A la gorra". Else (paid, or unspecified, without a label) the item is left out: no invented price and no admin wording ("Paga"). |
+| Description | the Event's block content (`the_content()`), left out when empty. |
+| Secondary | the subtitle (raw excerpt), left out when empty. |
+| Primary CTA / state note | see "Primary CTA" below. |
+| Compartir | **omitted** (decision N3: no share control until decided; no inert control). |
+| `lcda-ticket-types` | not rendered (no ticketing). |
+| Related | see "También en la agenda". |
+
+**Plugin inactive:** the post type is unregistered, so event URLs are 404. Theme pages render normally, because every call is guarded by `lcda_events_available()`.
 
 ## Page composition
 
@@ -100,22 +139,34 @@ Info column (design values): tag → title 18 / 14 · title → metadata 24 / 20
 
 The Event's access mode (ticketing contract §3 "Modalidad de acceso", §18) decides the label and destination. **Both use the same red Primary style**: the approved design shows no visual difference (Handoff §1.13).
 
-| Mode | Label (approved design wording) | Future destination (casa-eventos) | In 0.6.0 |
+| Mode | Label (approved design wording) | Destination | E2.1 (live) |
 |---|---|---|---|
-| Ticket sales | **Comprar entradas** | the purchase flow: ticket type + quantity → Comprar → direct checkout → Payway | presentation only, no destination |
-| Reservation (WhatsApp) | **Reservar** | a WhatsApp link (the same source as the site's WhatsApp CTA, or a casa-eventos setting) | presentation only, no destination |
+| Ticket sales (`tickets`) | **Comprar entradas** | future purchase flow: ticket type + quantity → Comprar → direct checkout → Payway | **no purchase control yet**: the note "Entradas a la venta próximamente" (decision N11) |
+| Reservation (`whatsapp`) | **Reservar** | the site's WhatsApp CTA (menu location "La Casa — CTA WhatsApp", same source as the header) | live when the plugin allows it **and** the menu location has a link; otherwise nothing |
+| External sale (`external`) | **Comprar entradas** | the event's external URL (Passline…) | live when the plugin allows it (a usable URL); otherwise nothing |
+
+The decision comes from `Event::cta()` (casa-eventos). The theme never derives it.
+- **No action** in these cases, with a non-interactive `<p class="lcda-event-status">` note in the CTA position (decision N2):
+  - paused → "Reservas pausadas";
+  - cancelled → "Evento cancelado";
+  - finished → "Este evento ya pasó";
+  - tickets before commerce → "Entradas a la venta próximamente".
+- **No CTA and no note** when there is no usable target: an external event without a URL, a WhatsApp event without the menu link, or no access mode.
+- Never a fake control: no `href="#"`, no `javascript:`, no disabled button.
+- The own ticket sales cutoff applies only to `tickets` (future commerce), never to `whatsapp` or `external` (decision N10).
 
 - The ticketing contract calls the modes `COMPRAR` / `RESERVAR`. The button text keeps the approved design's wording ("Comprar entradas", "Reservar"); it is shown uppercase by CSS.
 - **Plugin markup:** `<a class="lcda-btn" href="…">` inside `.lcda-event-cta`. One primary CTA per page; its accessible name is its label. A `<button>` is also styled, if the purchase UI needs one.
-- **Demo (0.6.0):** core Button blocks **without a link**. An `<a>` without `href` is not focusable and is not announced as a link, so nothing pretends to work: no `#`, no JavaScript, no cart, no checkout, no WhatsApp link. Tested: the demo buttons have no `href` and are not in the tab order.
+- **Demo (0.6.0, deleted in E2.4):** core Button blocks **without a link**. An `<a>` without `href` is not focusable and is not announced as a link, so nothing pretends to work: no `#`, no JavaScript, no cart, no checkout, no WhatsApp link. Tested: the demo buttons have no `href` and are not in the tab order.
 - **Ticket selector (future, ticket mode only):** reserved class `lcda-ticket-types`, placed in the info column **immediately before** `.lcda-event-cta` (32 / 26 above it; the CTA row then sits 16px below it). The approved V1 screen has no ticket selector, so none is designed or built. Its design, and the states the ticketing contract implies (sold out, sales closed, paused, cancelled), need a design decision before casa-eventos builds them. The theme will style them then.
 - Layout: desktop row with a 14px gap; it wraps in a narrow column (the 768px tablet info column is 373px, where "Comprar entradas" + "Compartir" don't fit: they wrap with 14px between, as the handoff allows). Mobile: stacked, full width, primary first, 10px apart, primary 14px text, Compartir 13px (the mobile screen's sizes; shared rule in `components.css` §9).
 
 ## Share ("Compartir")
 
 - The approved design shows an outline "Compartir" button next to the primary CTA. Its behavior is not defined (Handoff §6 lists "share behavior" as out of scope), and the V1 decision is no Web Share and no share plugin.
-- **0.6.0:** the button is presentation only: no link, no JavaScript, no third-party script, no tracking.
-- **Integration point:** the second item of `.lcda-event-cta` (outline style: core block style "Contorno" or `lcda-btn lcda-btn--outline`). When the behavior is decided, options are a plain link (for example a WhatsApp share URL with the event permalink), or a small native Web Share script with a copy-link fallback. Either needs an explicit product decision first. Until then, casa-eventos may omit the button or render it the same way the demo does.
+- **0.6.0 demo:** the button is presentation only: no link, no JavaScript, no third-party script, no tracking.
+- **E2 (decision N3):** the live page **omits** "Compartir". There is no share mechanism and no inert control until a share decision exists.
+- **Integration point:** the second item of `.lcda-event-cta` (outline style: core block style "Contorno" or `lcda-btn lcda-btn--outline`). When the behavior is decided, options are a plain link (for example a WhatsApp share URL with the event permalink), or a small native Web Share script with a copy-link fallback. Either needs an explicit product decision first. Until then the live page omits it (N3 above).
 
 ## Description (editorial content)
 
@@ -128,8 +179,12 @@ The Event's access mode (ticketing contract §3 "Modalidad de acceso", §18) dec
 
 - Reuses the compact card and the related grid (shared components, Step 3): 3 columns (tablet 2), mobile scroller with 62% cards and edge bleed. Burst colors alternate mint/yellow by position. No new card CSS.
 - Heading: "También en la agenda", Anton, the "Título chico" size (`clamp(1.6rem, 3vw, 2.2rem)`; mobile 1.4rem), 24px (mobile 18) above the cards. This is section-scoped in `event.css`, so the generic section heading is unchanged.
-- **0.6.0:** 3 demo cards from `demo-event-grid-related.php` (placeholder copy, empty posters). No query, no recommendation logic.
-- **Future:** casa-eventos supplies the events (V1 design rule: other upcoming events, e.g. the next 3 excluding the current one; the exact rule is its decision) as `article.lcda-event-card--compact` cards with a stretched link, `<h3>` title and `<time>` meta. If there are no other upcoming events, it omits the whole section.
+- **0.6.0 demo (deleted in E2.4):** 3 demo cards from `demo-event-grid-related.php` (placeholder copy, empty posters).
+- **E2.1 (live):** `Queries::related_events( $event, [ 'limit' => 3 ] )`: other upcoming (not finished) listed events, neither paused nor cancelled, nearest first (decision N8). The theme does not filter again.
+  - The cards are `template-parts/event/card.php` (compact variant): posters `loading="lazy"`, `<h3>` title with the stretched link, `<time>` meta "Sábado · 21:00" + a screen-reader full date, burst `aria-hidden`.
+  - Poster caches are primed by the query (no N+1).
+  - No related events → the whole section is omitted.
+- **v1 plan (implemented by E2.1 above):** casa-eventos supplies the events (V1 design rule: other upcoming events, e.g. the next 3 excluding the current one; the exact rule is its decision) as `article.lcda-event-card--compact` cards with a stretched link, `<h3>` title and `<time>` meta. If there are no other upcoming events, it omits the whole section.
 
 ## Responsive behavior
 
@@ -147,34 +202,35 @@ Gutters and the content column follow the layout contract (32 / 16px, 1376px col
 - CTAs: real links with their label as accessible name in plugin output; demo CTAs are not focusable because they do nothing. Visible keyboard focus (2px ink outline) on real links. Mobile CTAs are at least 44px tall (tested); the back link's hit area is at least 44px (invisible extension).
 - Burst `aria-hidden`; poster `alt` rules above; the "←" of the back link is read as part of the link text (acceptable; the plugin may wrap it in `aria-hidden`).
 - No animation, no autoplay, no JavaScript.
-- Known demo-only differences (core blocks can't express them): the metadata is `<div>`/`<p>` instead of `<dl>`, Cuándo has no `<time>`, and the burst isn't `aria-hidden`.
+- The 0.6.0 demo page's core-block differences (metadata as `<div>`/`<p>`, Cuándo without `<time>`, burst not `aria-hidden`) are gone with the demo pattern (E2.4); the live page has none of them.
 
 ## WordPress editor model and fixture boundary
 
-**Exists only for visual QA now:**
-- The pattern **"Evento (página de demostración)"** (category *La Casa del Árbol — Demo*). It is intended for a single test page with the Lienzo template. It is **not** offered as a starter pattern for new pages, and its description says events are not authored this way.
-- Its contents: placeholder copy ("Título del evento", "Categoría", "Día 00/00 · 00:00hs", "Lugar", "Entrada", "00"), an empty poster slot (4:5 placeholder), buttons without destinations, and the 3 related demo cards. No artwork was added, downloaded or generated. The back link points at the published `agenda` page when the pattern is inserted.
+**Removed in E2.4 (0.6.0 record):**
+- The pattern **"Evento (página de demostración)"** (category *La Casa del Árbol — Demo*) was intended for a single test page with the Lienzo template, never as a starter pattern (events are not authored as pages). The pattern file, the related demo grid and the Demo inserter category are deleted.
+- Its contents were: placeholder copy ("Título del evento", "Categoría", "Día 00/00 · 00:00hs", "Lugar", "Entrada", "00"), an empty poster slot (4:5 placeholder), buttons without destinations, and the 3 related demo cards. No artwork was added, downloaded or generated. The back link points at the published `agenda` page when the pattern is inserted.
 
 **The theme owns:** the markup shape and classes above, all CSS (`components.css`, `event.css`), the section headings' wording ("También en la agenda", "← Volver a la agenda"), and the future single-event template's layout.
 
-**casa-eventos will populate:** title, poster (with alt), category and its color, date/time (burst, Cuándo, `<time>`), venue, entrada text, description (the Event's block content), secondary paragraph, CTA mode/label/destination, the ticket selector (ticket mode), the related events, and the event URL. It also supplies Event states (cancelled, sold out…) when their presentation is designed.
+**casa-eventos populates (E2.1, through its public API):** title, poster (with alt), category and its color, date/time (burst, Cuándo, `<time>`), venue, entrada text, description (the Event's block content), secondary paragraph, CTA mode/label/destination, the ticket selector (ticket mode), the related events, and the event URL. It also supplies Event states (cancelled, sold out…) when their presentation is designed.
 
 **Normal Gutenberg editorial content:** only the description. In casa-eventos it is edited in the Event's own block editor, never on a page.
 
-**What disappears when casa-eventos exists:**
-- the demo page in wp-admin (delete it; nothing is migrated);
-- `patterns/demo-event-page.php` and the other `demo-*` patterns;
-- the demo-only differences listed under Accessibility.
+**What disappeared with casa-eventos (E2):**
+- `patterns/demo-event-page.php` and the other `demo-*` patterns: deleted in E2.4;
+- the demo-only differences listed under Accessibility;
+- still a wp-admin task: a test page built from the demo pattern, if one exists on a site, is deleted by hand (nothing is migrated). Such a page no longer gets `event.css`.
 
-**Integration notes for the casa-eventos milestone:**
-- The single Event view needs the site chrome. Today the header/footer replacement and the chrome CSS/JS run only on the Lienzo page template (`lcda_is_canvas()` in `inc/astra.php`). The Event single view must be included then, through a theme template for the Event post type or a filter. This is a small theme change made together with the plugin, not now.
-- Who renders the view (a theme `single-*.php` template calling plugin data functions, or a plugin block/template) is decided at that milestone. Either way the output must follow this contract.
+**Integration notes (resolved in E2.1):**
+- The Event single view gets the site chrome: `lcda_is_canvas()` covers event singles.
+- The theme renders the view (`single-casa_evento.php`) from the plugin's public API (`event-markup-contract.md` "Rendering responsibility").
+- `event.css` loads on event singles only (since E2.4; before, also on a page built from the demo pattern).
 
 ## Deviations and assumptions
 
 - **Back link inside the main section** (design: separate row above it). The rendered distances are identical (24 → link → 28; mobile 18 → link → 20), and it avoids a loose block at the top level of the page.
 - **Button wording:** "Comprar entradas" / "Reservar" (approved design) for the ticketing contract's `COMPRAR` / `RESERVAR`.
-- **Demo metadata values** are placeholders ("Lugar" instead of "Av. Córdoba 5217"), consistent with the other demo patterns (no event data in the theme).
+- **Demo metadata values** (0.6.0 demo, deleted in E2.4) were placeholders ("Lugar" instead of "Av. Córdoba 5217"), consistent with the other demo patterns (no event data in the theme).
 - **Description headings and lists** are not in the approved screen (it shows one paragraph). Their styling (sizes, spacing, indent) is a restrained extension of the approved type system, needed so editorial content works.
 - **Mobile CTA sizes** (14 / 13px): the approved mobile screen's values, added to the shared CTA row. Home and Agenda don't use `.lcda-event-cta`.
 - **Tablet:** 2 columns as the handoff says. At 768–800px the info column is narrow (373–391px): metadata values wrap inside their cells and the CTA row wraps. Flagged for design review, as §1.21 asks, rather than improvised.

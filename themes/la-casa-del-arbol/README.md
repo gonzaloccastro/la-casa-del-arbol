@@ -22,7 +22,8 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - `inc/astra.php` — integración con Astra (solo mediante filtros/acciones públicos de Astra).
 - `inc/patterns.php` — categorías de patterns y variantes de estilo (botones, sticker, reel de Instagram).
 - `inc/blocks.php` — comportamiento al renderizar: carga el script del carrusel solo donde hay carrusel; el botón de
-  WhatsApp de la franja Festejá toma su destino del menú "La Casa — CTA WhatsApp".
+  WhatsApp de la franja Festejá toma su destino del menú "La Casa — CTA WhatsApp". También los helpers de bloques que
+  comparten la Agenda y la Home (`lcda_block_has_class()`, `lcda_replace_block_inner()`).
 - `theme.json` — tokens: colores, tipografías, tamaños, escala de espaciados, anchos (lectura 760px, contenedor 1376px + márgenes = 1440px).
 - `assets/css/base.css` — fundamentos visuales (tokens, resets de Astra, tipografía, botones).
 - `assets/css/components.css` — componentes compartidos: encabezado de sección, estrella de fecha y sticker,
@@ -40,24 +41,47 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
 - `assets/images/logo-*.svg` — logo canónico (símbolo y completo), tomado sin cambios de
   `docs/design/Website Direction.dc.html`; solo el relleno pasa a `currentColor`.
 - `template-parts/site/` — header, menú mobile (`<dialog>`) y footer.
+- `single-casa_evento.php` + `template-parts/event/` (detalle, relacionados, tarjeta) + `inc/events.php`:
+  - la página de cada evento (`/evento/…`), con los datos reales de `casa-eventos` (E2.1);
+  - el theme solo usa la API pública del plugin (`Event`, `Queries`) y decide markup y textos;
+  - estados, botón y relacionados los decide el plugin;
+  - ver `docs/implementation/single-event-contract.md`.
+- `inc/agenda.php` + `template-parts/agenda/` (navegación, chips, tarjetas, aviso vacío):
+  - la Agenda dinámica (E2.2): el mes, la navegación entre meses, los chips y las tarjetas salen de `casa-eventos`;
+  - se completan al mostrar la página, sobre los bloques de los patrones de la Agenda (también en páginas armadas
+    con la versión 0.5.0);
+  - `?mes=AAAA-MM` y `?categoria=slug`; ver `docs/implementation/agenda-contract.md` "Dynamic Agenda".
+- `inc/home.php` — Eventos destacados de la Home (E2.3):
+  - hasta 4 tarjetas con los próximos eventos destacados de `casa-eventos` (`Queries::featured_events()`), con la
+    tarjeta compartida (variante destacada, fecha "Sáb 03/10 · 21:00");
+  - se completan al mostrar la página, sobre la grilla `lcda-event-grid--featured` (también en Homes armadas con 0.4.x);
+  - sin eventos destacados próximos, o sin `casa-eventos`, la sección entera no se muestra;
+  - ver `docs/implementation/home-contract.md` "Eventos destacados: dynamic section".
 - `page-templates/canvas.php` — plantilla **La Casa — Lienzo** (full-bleed, sin título ni sidebar).
-- `patterns/` — patterns de Gutenberg (`demo-*`: contenido de demostración temporal).
+- `patterns/` — patterns de Gutenberg. Los patrones de demostración de eventos (`demo-*`) se borraron en E2.4: los
+  eventos salen de `casa-eventos`.
 
 ## Uso en WordPress
-- Páginas diseñadas (Home, Agenda, eventos de demo): Atributos de página → Plantilla → **La Casa — Lienzo**.
+- Páginas diseñadas (Home, Agenda, páginas informativas): Atributos de página → Plantilla → **La Casa — Lienzo**.
 - **Home**: página con plantilla Lienzo + patrón **La Casa del Árbol → Home (página completa)** (también se ofrece al
   crear una página nueva). Después: reemplazar las fotos del carrusel (seleccionar imagen → Reemplazar, y escribir
-  el texto alternativo), los afiches y textos de las tarjetas, las imágenes de Instagram (estilo "Reel de Instagram"
-  para los reels) y la volanta del mes. Ajustes → Lectura → página de inicio estática = Home. Pasos completos en
+  el texto alternativo) y las imágenes de Instagram (estilo "Reel de Instagram" para los reels). Las tarjetas de
+  Eventos destacados se arman solas con los eventos marcados como destacados en **Eventos**. Una Home armada antes
+  de E2.3 solo necesita un cambio de texto, una vez: volanta "Septiembre 2026" → "Próximas fechas" y título
+  "Eventos destacados del mes" → "Eventos destacados". Ajustes → Lectura → página de inicio estática = Home. Pasos completos en
   `docs/implementation/home-contract.md`.
 - **Agenda**: página `agenda` con plantilla Lienzo + patrón **La Casa del Árbol → Agenda (página completa)**.
-  Se edita el mes (título) cada mes. Las categorías son solo visuales (todavía no filtran) y las 9 tarjetas son
-  de demostración: los eventos reales se van a cargar desde Eventos (`casa-eventos`), que reemplaza el mosaico.
+  El mes, la navegación entre meses, las categorías y las tarjetas se arman solos con los eventos de **Eventos**
+  (`casa-eventos`); en la página solo se edita la volanta. Una página armada con la Agenda 0.5.0 (mes escrito a mano,
+  categorías fijas, 9 tarjetas de demostración) no hace falta rehacerla: se reemplaza igual al mostrarla.
   Detalle: `docs/implementation/agenda-contract.md`.
-- **Página de evento**: todavía no se cargan eventos. Para revisar el diseño hay un patrón de demostración,
-  **La Casa del Árbol — Demo → Evento (página de demostración)**, para una única página de prueba con plantilla
-  Lienzo. No es la forma de cargar eventos: con `casa-eventos` cada evento se carga en Eventos y la página de prueba
-  se borra. "Comprar entradas" / "Reservar" y "Compartir" son solo visuales (sin destino).
+- **Página de evento**: cada evento se carga en **Eventos** (`casa-eventos`) y su página (`/evento/…`) se arma sola con el
+  diseño aprobado.
+  - El botón es "Reservar" (WhatsApp, destino del menú **La Casa — CTA WhatsApp**) o "Comprar entradas" (venta externa).
+  - Un evento pausado, cancelado o pasado muestra un aviso en lugar del botón.
+  - No hay "Compartir".
+  - El patrón de demostración "Evento (página de demostración)" se borró en E2.4. Si en un sitio quedó una página de
+    prueba armada con él, se borra a mano (ya no recibe los estilos de la página de evento).
 - Botones: estilo por defecto = Primario rojo. Variantes en la barra lateral del bloque: Oscuro, Contorno, Enlace de texto.
   En mobile los botones pasan a ancho completo; agregar la clase `lcda-inline` para mantener uno en línea.
 - Armado de páginas (plantilla Lienzo): la página se compone con **secciones**. Cada sección trae el ancho,
@@ -69,13 +93,9 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
   - **La Casa del Árbol → Sección de texto**: igual, con texto a ancho de lectura (páginas informativas).
   - **La Casa del Árbol → Encabezado de sección**: volanta + título + acción opcional (borrar el bloque
     Botones si no hace falta). Ocupa el ancho del contenedor.
-  - **La Casa del Árbol — Demo → Grilla de eventos** (Destacados, Agenda, Relacionados): en cada tarjeta
-    elegir el afiche, reemplazar los textos de ejemplo y enlazar el título a la página del evento (toda la
-    tarjeta queda clickeable). Categoría amarilla: color de fondo Amarillo. El sello circular de la Agenda
-    va solo con "Entrada libre" o "A la gorra". Son contenido temporal hasta que exista `casa-eventos`.
 - Espaciados: el editor ofrece solo la escala del diseño (XS 8 · S 16 · M 24 · L 32 · XL 48 · 2XL 64;
   L, XL y 2XL se achican en mobile). No hay valores libres en píxeles.
-- Secciones de la Home, también sueltas en **La Casa del Árbol**: Carrusel de portada · Eventos destacados del mes ·
+- Secciones de la Home, también sueltas en **La Casa del Árbol**: Carrusel de portada · Eventos destacados ·
   ¡Festejá en el Árbol! (WhatsApp) · Seguinos en Instagram · Newsletter (Comunidad). El newsletter todavía no
   envía nada (botón desactivado); Instagram son imágenes fijas, sin conexión con Instagram.
 - Secciones de la Agenda, también sueltas en **La Casa del Árbol**: Agenda — Encabezado · Agenda — Mosaico de eventos.
@@ -124,7 +144,7 @@ WordPress imprime los `@font-face`; no hay pedidos a Google Fonts.
 ## Filosofía
 - Gutenberg para contenido editorial.
 - `theme.json`, patterns y CSS para consistencia.
-- Sin lógica de eventos/ticketing en el theme: eso vive en el plugin `casa-eventos`.
+- Sin lógica de eventos/ticketing en el theme: eso vive en el plugin `casa-eventos`. El theme presenta los eventos con la API pública del plugin, sin leer metadatos ni hacer consultas de eventos (lo controla la regla 9 de `plugins/casa-eventos/tests/check-architecture.php`).
   Contrato de markup compartido: `docs/implementation/event-markup-contract.md`.
 - WooCommerce y Payway se integrarán después.
 - Datos que no son del theme: eventos (entidad Evento de `casa-eventos`, única fuente), feed de Instagram (plugin

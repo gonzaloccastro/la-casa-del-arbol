@@ -1,16 +1,35 @@
 # Event markup contract (theme ↔ casa-eventos)
 
-**Status:** v0.7. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`); 0.4.1 recorded the data-ownership decisions (`content-ownership.md`); Step 5 (0.5.0) built the Agenda on the agenda demo grid and the filter chips (`agenda-contract.md`); Step 6 (0.6.0) built the Single Event detail (`single-event-contract.md`, which holds the full page markup). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
+**Status:** v1.1, E2 complete (theme 0.7.0 with casa-eventos 0.2.0, 2026-09-29): Single, Agenda and Home render real Events through one shared card; E2.4 deleted the demo patterns and moved the render-slot helper to `inc/blocks.php`. E2.3 (v1.0, 2026-09-29): the Home "Eventos destacados" renders real featured events (render slots in `inc/home.php`, the shared card, featured variant); the section hides itself with no eligible events. E2.2 (v0.9, 2026-09-28): the Agenda renders real events (render slots in `inc/agenda.php`, the shared card). E2.1 (v0.8): the theme renders real events; the Single Event is live (`single-casa_evento.php` + `template-parts/event/`). Before that: v0.7. Step 3 (shared components) fixed the inner markup; Step 3.1 added the layout contract (`layout-contract.md`) and replaced the single demo cards with demo grids; Step 4 uses the featured demo grid inside the Home section (`home-contract.md`); 0.4.1 recorded the data-ownership decisions (`content-ownership.md`); Step 5 (0.5.0) built the Agenda on the agenda demo grid and the filter chips (`agenda-contract.md`); Step 6 (0.6.0) built the Single Event detail (`single-event-contract.md`, which holds the full page markup). The CSS lives in `themes/la-casa-del-arbol/assets/css/components.css`; button classes are in `base.css`.
 **Visual source of truth:** `docs/design/Final Design Handoff.md` §1.8–1.15, §2.2, §3, §4.
 
 ## Why this exists
 
 - The **theme** owns presentation: markup shape, class names, CSS, responsive behavior.
-- The future **casa-eventos** plugin owns the event domain: CPT, fields, WooCommerce mapping, ticket/access modes, status and visibility, queries, URLs, and CTA destinations.
+- The **casa-eventos** plugin owns the event domain: CPT, fields, WooCommerce mapping, ticket/access modes, status and visibility, eligibility, queries, URLs, and whether a call to action exists (`Event::cta()`).
 
-During the visual phase, Agenda, Single Event and the Home "destacados" cards are **static demo content** built from core Gutenberg blocks in `lcda-demo` patterns. Later, casa-eventos renders real events **into the same classes**. The theme CSS styles both outputs, so the visual layer is not rebuilt, and the only theme cleanup is removing the demo patterns.
+**Rendering responsibility (closed, E2):** the **theme renders** the event views from the plugin's documented public API, and the plugin supplies data and rules.
+- The theme may call only `CasaEventos\Core\Event` (read model), `CasaEventos\Core\Queries` (selections) and `CasaEventos\Core\POST_TYPE` (template conditions).
+- The theme ships `single-casa_evento.php` (E2.1) and later the Agenda/Home integration (E2.2 / E2.3).
+- The theme owns markup, classes, formatting and wording. The WhatsApp destination comes from its CTA menu location.
 
-The theme never registers event CPTs, meta, taxonomies or queries, and never ships `archive-*` / `single-*` event templates.
+The theme never:
+- registers event CPTs, meta or taxonomies;
+- reads `_casa_*` meta or any event meta directly;
+- runs event `WP_Query` / `get_posts`;
+- names the schema strings;
+- re-derives an Event Core rule (finished, sales cutoff, CTA availability, eligibility).
+
+The plugin's architecture check (`plugins/casa-eventos/tests/check-architecture.php`, rule 9) enforces this. It fails on:
+- registration calls;
+- `_casa_` keys;
+- direct meta access;
+- hard-coded `'casa_evento'` / `'casa_categoria'`;
+- non-public plugin symbols;
+- event queries;
+- calls to rule-level read-model methods (sales close, GMT/effective end, `is_finished`, `is_actionable`, `capacity`, `validation`, `external_url`, `access_mode`, `status`).
+
+During the visual phase, Agenda, Single Event and the Home "destacados" cards were **static demo content** built from core Gutenberg blocks in `lcda-demo` patterns. The real views render **into the same classes**, so the visual layer was not rebuilt. The demo patterns were deleted in E2.4; pages that still store demo cards (Home 0.4.x, Agenda 0.5.0) are taken over at render time ("Structural class contracts" below).
 
 ## Rules both sides follow
 
@@ -62,13 +81,14 @@ Variants: `lcda-event-card--featured` · `lcda-event-card--full` · `lcda-event-
 |---|---|---|---|---|
 | `lcda-event-card` | ✓ | ✓ | ✓ | `<article>`. |
 | `lcda-event-card__poster` | ✓ | ✓ | ✓ | Relative frame, `#e7e3d9` while loading/empty, 4:5 when there is no image. Holds the image, burst and stamp. |
-| `lcda-event-card__image` | ✓ | ✓ | ✓ | `<img>` with real `width`/`height`, `alt=""` (the title follows), `loading="lazy"` below the fold. Not styled by class: any `img` in the poster is. |
+| `lcda-event-card__image` | ✓ | ✓ | ✓ | `<img>` with real `width`/`height`, `alt=""` (the title follows), `loading="lazy"` below the fold. Not styled by class: any `img` in the poster is. `sizes`: the scroller cards' hint for featured/compact; the wall hint for full (E2.2: full gutter width on mobile, 2 then 3 columns). |
 | `lcda-burst lcda-event-card__burst` | ✓ | ✓ | ✓ | Day of month, 2 digits. `aria-hidden="true"` (the date is also given as text). |
 | `lcda-stamp lcda-event-card__stamp` | — | conditional | — | Only when entrada is "Entrada libre" or "A la gorra". `aria-hidden="true"` (duplicates entrada). |
 | `lcda-event-card__body` | ✓ | ✓ | ✓ | |
 | `lcda-event-card__header` | ✓ | ✓ | — | Row: meta left, tag right. Compact has the meta directly in the body. |
-| `lcda-event-card__meta` | ✓ | ✓ | ✓ | "WEEKDAY · HH:MM" inside `<time datetime>` + visually hidden full date (`screen-reader-text`). |
+| `lcda-event-card__meta` | ✓ | ✓ | ✓ | "WEEKDAY · HH:MM" inside `<time datetime>` + visually hidden full date (`screen-reader-text`). Featured (Home, E2.3): "SÁB 03/10 · 21:00" (short weekday + dd/mm, because the Home spans months; `lcda_event_card_meta_html( $event, true )`); full and compact unchanged. |
 | `lcda-tag` (+ `lcda-tag--yellow`) | ✓ | ✓ | — | Category label. |
+| `lcda-tag lcda-tag--cancelled` | — | conditional | — | E2.2. "Cancelado" on a cancelled event's Agenda card: real text (not `aria-hidden`), red with ink text, in the header between the meta and the category tag (both pushed right). Never the poster stamp. |
 | `lcda-event-card__title` | ✓ | ✓ | ✓ | Heading element. Level follows the page outline: `<h3>` under a section `<h2>` (Home, Related), `<h2>` directly under the Agenda `<h1>`. Contains the card's only link. |
 | `lcda-event-card__link` | ✓ | ✓ | ✓ | The `<a>` inside the title. Stretched (`::after` covers the card), so the whole card is clickable. No other links inside the card. Any `<a>` inside the title gets the same treatment, so core headings with a plain link work too. |
 | `lcda-event-card__subtitle` | — | ✓ | — | `<p>`. |
@@ -106,7 +126,7 @@ Reference markup (full variant; drop the parts the other variants don't use):
 </article>
 ```
 
-Core-block equivalent (demo patterns): the same classes on core blocks: group (`tagName: article`), group, image, paragraphs, heading, group. Differences, accepted for demo content only: the burst and stamp can't carry `aria-hidden`, the meta has no `<time>` or hidden full date, and the image block puts no class on the `<img>`. WordPress adds `width`/`height` to Media Library images when it renders the page, so the native ratio still applies.
+Core-block equivalent (the deleted demo patterns; still stored in Home 0.4.x / Agenda 0.5.0 pages, where the render slots replace it): the same classes on core blocks: group (`tagName: article`), group, image, paragraphs, heading, group. Differences, accepted for demo content only: the burst and stamp can't carry `aria-hidden`, the meta has no `<time>` or hidden full date, and the image block puts no class on the `<img>`. WordPress adds `width`/`height` to Media Library images when it renders the page, so the native ratio still applies.
 
 ### Single Event: `lcda-event-detail`
 
@@ -124,6 +144,7 @@ Core-block equivalent (demo patterns): the same classes on core blocks: group (`
 | `lcda-event-detail__secondary` | Secondary paragraph (bajada), `#5a5a5a` | Step 6 |
 | `lcda-event-cta` | CTA row: primary + "Compartir". Plugin: `<a class="lcda-btn">` (Comprar entradas / Reservar, same red style for both) + `<a\|button class="lcda-btn lcda-btn--outline">`. Editor: class on a Buttons block. Mobile: stacked, full width (primary 14px, Compartir 13px since Step 6). | Step 3 |
 | `lcda-back-link` | "← Volver a la agenda" | Step 3 |
+| `lcda-event-status` | E2.1. Non-interactive state note (`<p>`) in the CTA position when there is no action: "Evento cancelado", "Reservas pausadas", "Este evento ya pasó", "Entradas a la venta próximamente". Replaces the CTA row, never shown with it | E2.1 |
 | `lcda-ticket-types` | **Reserved.** Not part of V1 visuals. Future ticket selector (ticket mode only), placed right before `lcda-event-cta` in the info column; spacing already defined, look not designed (`single-event-contract.md`) | — |
 
 Metadata reference markup:
@@ -142,9 +163,11 @@ Leave out an item whose value is missing. The remaining items share the width eq
 
 | Class | Notes |
 |---|---|
-| `lcda-agenda-header` | On the header `lcda-section`: eyebrow + month `<h1 class="lcda-agenda-header__title">` + chips (Step 5) |
+| `lcda-agenda-header` | On the header `lcda-section`: eyebrow + month `<h1 class="lcda-agenda-header__title">` + month navigation + chips (Step 5; navigation E2.2) |
+| `lcda-agenda-nav` | E2.2. `<nav aria-label="Meses de la agenda">` right after the H1: `<a class="lcda-agenda-nav__link lcda-agenda-nav__link--prev" rel="prev">← Mes</a>` and `…--next" rel="next">Mes →</a>`; a missing side is left out, no nav without either. Text-link style, secondary to the H1 |
 | `lcda-agenda-events` | On the event-wall `lcda-section` that holds `lcda-event-grid--agenda` (Step 5) |
-| `lcda-filter-chips` / `lcda-filter-chip` | `<ul>` / `<li>`. V1: static text, not focusable, no `role` or `aria-*` state, so nothing claims to filter; the active chip has `is-active` (visual only). No JS filtering in the theme. casa-eventos may put a link in each item (`<li class="lcda-filter-chip"><a href aria-current="page">`); the theme already styles that link (44px hit area, focus ring). See `agenda-contract.md` |
+| `lcda-filter-chips` / `lcda-filter-chip` | `<ul>` / `<li>`. Since E2.2 each item holds a server-side link (`<li class="lcda-filter-chip is-active"><a href aria-current="page">Todos</a></li>`); the active chip has `is-active` and its link `aria-current="page"`; 44px hit area, focus ring. No list at all for a month without events. No JS filtering. See `agenda-contract.md` "Dynamic Agenda" |
+| `lcda-agenda-empty` | E2.2. `<p>` printed instead of the grid: "No hay eventos programados para este mes." / "No hay eventos de esta categoría para este mes." |
 
 ## Source of truth and consumers
 
@@ -152,12 +175,32 @@ The **Event entity (casa-eventos) is the single source of truth** for every even
 
 | Consumer | Selection (implemented in casa-eventos, not the theme) | Card variant |
 |---|---|---|
-| Home "Eventos destacados del mes" | published Events with `featured_on_home` = true that are current/upcoming, nearest first; past events drop out automatically | `--featured` |
-| Agenda | published current/upcoming Events, chronological (month view) | `--full` |
-| Single Event | the Event itself | detail components |
-| "También en la agenda" | other upcoming Events | `--compact` |
+| Home "Eventos destacados" | `Queries::featured_events()`: published, listed, featured, active (neither paused nor cancelled), not finished, nearest first; not month-bound; `limit` 4 (E2.3, live). The whole section is omitted when the result is empty or casa-eventos is inactive | `--featured` |
+| Agenda | `Queries::month_events()`: published, listed, local start in the selected month, including finished, paused and cancelled; chronological (E2.2, live). The theme only picks the selected category's cards (`Event::category()`) | `--full` |
+| Single Event | the Event itself (`Event::get()`), rendered by `single-casa_evento.php` (E2.1, live) | detail components |
+| "También en la agenda" | `Queries::related_events()`: other upcoming listed events, neither paused nor cancelled, nearest first, max 3 (E2.1, live) | `--compact` |
 
 Editors never re-enter event data on the Home or Agenda pages. Details and the other integration boundaries (Instagram, newsletter) are in `content-ownership.md`.
+
+### Card variants (one implementation)
+
+`template-parts/event/card.php` is the only event card in the theme: `featured` (Home), `full` (Agenda), `compact` (Related). Differences are data-driven inside that file: the featured meta shows "Sáb 03/10 · 21:00", full and compact show "Sábado · 21:00"; only full shows the stamp, subtitle, venue and the "Cancelado" tag; compact shows no category tag and no entry footer. Every variant carries the ISO `<time datetime>` and the same screen-reader date ("Sábado 3 de octubre, 21:00"). The Single's Cuándo uses "Sábado 03/10 · 21:00hs" (with its declared end, if any).
+
+## Structural class contracts (render slots)
+
+The Home and Agenda stay ordinary Gutenberg pages. The theme fills these blocks at render time, recognized **only by their classes** (no page ID, slug or front-page check). Removing a class in the editor disconnects that slot; moving a block changes what it fills.
+
+| Page | Block | Class | Filled with | Without casa-eventos |
+|---|---|---|---|---|
+| Agenda | core/heading | `lcda-agenda-header__title` | the selected month (text only) + `nav.lcda-agenda-nav` after it | authored text, no nav |
+| Agenda | core/list | `lcda-filter-chips` | "Todos" + the month's categories (links) | nothing |
+| Agenda | core/group | `lcda-event-grid--agenda` | `full` cards, or `p.lcda-agenda-empty` | nothing |
+| Home | core/group | `lcda-event-grid--featured` | up to 4 `featured` cards | nothing |
+| Home | core/group | `lcda-section` whose blocks contain the featured grid | kept as is; removed entirely with 0 eligible events | removed entirely |
+
+- The slots keep each block's own element and attributes and replace only its inner HTML (`lcda_replace_block_inner()` in `inc/blocks.php`, shared by `inc/agenda.php` and `inc/home.php`).
+- Whatever the page stores inside those blocks (editor-only notes, or the demo cards of Home 0.4.x / Agenda 0.5.0 pages) is never published. No pattern file is read at render time.
+- The Agenda canonical (`?mes`) applies only to the viewed page that holds the Agenda heading or wall class.
 
 ## Data casa-eventos supplies per event (view data)
 
@@ -179,15 +222,15 @@ Derived from the handoff's design data model (§5):
 
 Not needed from data: burst color (CSS), aspect ratio (intrinsic image size), venue text in V1 ("La Casa del Árbol" / "Av. Córdoba 5217").
 
-## Demo content registry
+## Demo content registry (deleted in E2.4)
 
-Theme patterns that hold static demo events. casa-eventos makes them obsolete, and they are deleted from the theme then.
+Theme patterns that held static demo events. casa-eventos made them obsolete, and E2.4 deleted all four files and the "La Casa del Árbol — Demo" inserter category. Pages built from them keep their stored blocks: the Home and Agenda grids are replaced at render time; a test page built from the Single Event demo is deleted by hand.
 
-| Pattern (category "La Casa del Árbol — Demo") | File | Since |
+| Pattern (category "La Casa del Árbol — Demo") | File (deleted) | Since |
 |---|---|---|
-| Grilla de eventos — Destacados (demo): 4 featured cards. Also included by `home-featured-events.php` (Home), so the Home cards are the same demo markup | `patterns/demo-event-grid-featured.php` | Step 3.1 |
+| Grilla de eventos — Destacados (demo): 4 featured cards. No longer included by `home-featured-events.php` since E2.3 (the Home grid is a render slot); Home 0.4.x pages still store this markup and the slot replaces it | `patterns/demo-event-grid-featured.php` | Step 3.1 |
 | Grilla de eventos — Agenda (demo): 9 full cards, `<h2>` titles (Step 5; 3 cards with `<h3>` before). Also included by `agenda-events.php` (Agenda) | `patterns/demo-event-grid-agenda.php` | Step 3.1 |
 | Grilla de eventos — Relacionados (demo): 3 compact cards. Also included by `demo-event-page.php` | `patterns/demo-event-grid-related.php` | Step 3.1 |
 | Evento (página de demostración): the whole Single Event screen for visual QA (main section + related section). Not a starter pattern: events are never authored as pages | `patterns/demo-event-page.php` | Step 6 |
 
-They hold placeholder text only ("Título del evento", "Día · 00:00", "00") and empty image slots. No event data and no artwork ship in the theme. Step 3's single-card demo patterns (`demo-event-card-*`) were removed in Step 3.1: a card inserted on its own landed in the reading column, which is not a layout the design uses. Cards already inserted from them keep working, because styling depends only on classes.
+They held placeholder text only ("Título del evento", "Día · 00:00", "00") and empty image slots. No event data and no artwork ship in the theme. Step 3's single-card demo patterns (`demo-event-card-*`) were removed in Step 3.1: a card inserted on its own landed in the reading column, which is not a layout the design uses. Cards already inserted from them keep working, because styling depends only on classes.

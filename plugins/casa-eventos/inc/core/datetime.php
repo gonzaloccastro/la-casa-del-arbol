@@ -252,6 +252,10 @@ function sales_close_gmt( $sales_close_local, $start_gmt, $tz, $offset ) {
 /**
  * Validate a 'YYYY-MM' month key.
  *
+ * Valid keys run from 1970-01 to 9999-11: every valid month has bounds
+ * (month_bounds()), and the end bound of 9999-12 would be a 5-digit year,
+ * which sorts before every real date as a string.
+ *
  * @param mixed $ym Month key.
  * @return string|null Canonical 'YYYY-MM' or null.
  */
@@ -259,11 +263,12 @@ function parse_month( $ym ) {
 	if ( ! is_string( $ym ) || ! preg_match( '/^(\d{4})-(\d{2})$/', $ym, $m ) ) {
 		return null;
 	}
+	$year  = (int) $m[1];
 	$month = (int) $m[2];
-	if ( (int) $m[1] < 1970 || $month < 1 || $month > 12 ) {
+	if ( $year < 1970 || $month < 1 || $month > 12 || ( 9999 === $year && 12 === $month ) ) {
 		return null;
 	}
-	return sprintf( '%04d-%02d', (int) $m[1], $month );
+	return sprintf( '%04d-%02d', $year, $month );
 }
 
 /**
@@ -283,6 +288,10 @@ function month_bounds( $ym ) {
 /**
  * Move a month key by N months.
  *
+ * The month after 9999-11 (9999-12) is outside the valid range, but it is
+ * still the correct end bound of 9999-11, so the arithmetic result is
+ * returned whenever it has 4 digits; null below 1970 or past 9999-12.
+ *
  * @param string $ym    'YYYY-MM'.
  * @param int    $delta Months.
  * @return string|null
@@ -293,6 +302,9 @@ function shift_month( $ym, $delta ) {
 		return null;
 	}
 	$index = (int) substr( $ym, 0, 4 ) * 12 + (int) substr( $ym, 5, 2 ) - 1 + (int) $delta;
+	if ( $index < 1970 * 12 || $index > 9999 * 12 + 11 ) {
+		return null;
+	}
 	return sprintf( '%04d-%02d', intdiv( $index, 12 ), $index % 12 + 1 );
 }
 

@@ -243,6 +243,25 @@ rm -- ~/lcda-deploy-20260923-175458.tar
 rm -rf -- ~/.lcda-deploy/20260923-190000
 ```
 
+## E2 release checklist (theme 0.7.0 + casa-eventos 0.2.0)
+
+Documentation only; nothing here has been run against production. E2 makes Home, Agenda and Event pages dynamic, so the release is a plugin **and** a theme change. `deploy-theme.ps1` deploys only the theme; the plugin deployment workflow is still an open item (`casa-eventos-contract.md` §13).
+
+1. **Backup:** database and `wp-content/` (plugins, uploads) on the host, in addition to the theme backup the script makes.
+2. **Order:** plugin first, then the theme. Either order is safe (every theme call to the plugin is guarded, and without the plugin the event sections are simply left out), but plugin-first means the new theme renders real events as soon as it lands.
+3. **Plugin:** upload `casa-eventos` 0.2.0 and **activate** it (activation registers the post type, flushes permalinks and installs the Programador role and capabilities). Never use uninstall to "reset" it. Check that an Event URL `/evento/{slug}/` resolves; if it returns 404, open Settings → Permalinks and save once.
+4. **Theme:** deploy 0.7.0 with `deploy-theme.ps1` (procedure above).
+5. **Versions:** Plugins shows Casa Eventos **0.2.0**; Appearance → Themes shows La Casa del Árbol **0.7.0** (`grep -m1 Version la-casa-del-arbol/style.css`).
+6. **Orphan demo patterns:** the deploy is additive, so these deleted files stay on the server and keep a "Demo" section in the pattern inserter until removed (reviewed manual step, see Orphan files): `patterns/demo-event-grid-featured.php`, `patterns/demo-event-grid-agenda.php`, `patterns/demo-event-grid-related.php`, `patterns/demo-event-page.php`. They are never used at render time. Delete any test page built from the Single Event demo pattern.
+7. **Home one-time copy edit** (pages built before E2.3, `home-contract.md`): eyebrow "Septiembre 2026" → "Próximas fechas"; H2 "Eventos destacados del mes" → "Eventos destacados".
+8. **Takeover check:** the existing Home shows real featured cards (or no Eventos destacados section when none is eligible) and no "Título del evento"; the existing Agenda shows the current month as H1, real cards, category chips and month links. Neither page needs to be rebuilt.
+9. **Event pages:** open an active, a paused and a cancelled Event: the CTA or state note matches; "← Volver a la agenda" works; related cards show at most 3.
+10. **Cache review (required):** Home eligibility, the Agenda's current month and every event state are computed per request. If a full-page cache is active (host or plugin), give Home, Agenda and `/evento/` pages a short TTL or exclude them, and purge after the deploy. Until then, purge after editorial changes that must show at once (pausing, cancelling, featuring an event).
+11. **Canonical / noindex:** `/agenda/?mes=YYYY-MM` has a month-aware canonical without `categoria`; an unlisted Event is reachable but `noindex` and absent from the sitemap and search; the site-wide noindex/password setup of the dev domain is unchanged.
+12. **Responsive smoke test:** Home, Agenda and one Event at about 1400, 1024, 768 and 390 px: no horizontal scroll, the mobile menu opens, header and footer intact.
+13. **Programador smoke test:** log in as a Programador: only Eventos and Medios in the menu; can create, publish, pause and cancel an Event; cannot delete Events or manage categories.
+14. **Rollback:** theme per Rollback above; the plugin can be deactivated (never uninstalled), which hides the event sections safely without touching content.
+
 ## Troubleshooting
 
 - **`Host key verification failed`:** the host key isn't trusted yet, or it changed. See prerequisite 3. Don't bypass it.

@@ -361,6 +361,40 @@ final class Event {
 		return '' !== $close && now_gmt( $timestamp ) < $close;
 	}
 
+	// ----- Call to action ---------------------------------------------------
+
+	/**
+	 * Whether own ticket sales exist. False until the commerce phase, which
+	 * enables it through the filter.
+	 *
+	 * @return bool
+	 */
+	public function tickets_on_sale() {
+		return (bool) apply_filters( 'casa_eventos/ticket_sales_available', false, $this );
+	}
+
+	/**
+	 * The public call-to-action decision (rules: cta_decision() in state.php).
+	 * Frontends decide wording and markup; they resolve the WhatsApp
+	 * destination themselves (the site's single WhatsApp CTA).
+	 *
+	 * @param int|null $timestamp Now (unix); defaults to time().
+	 * @return array{available: bool, mode: string, reason: string, state: string, url: string}
+	 *         mode: tickets | whatsapp | external | ''. reason: available,
+	 *         no_mode, no_target, not_on_sale, sales_closed, or the
+	 *         non-actionable effective state (draft, scheduled, paused,
+	 *         cancelled, finished). url: the external target when available.
+	 */
+	public function cta( $timestamp = null ) {
+		return cta_decision(
+			$this->effective_state( $timestamp ),
+			$this->access_mode(),
+			$this->external_url(),
+			$this->tickets_on_sale(),
+			$this->is_before_sales_close( $timestamp )
+		);
+	}
+
 	// ----- Venue (single venue in V1) ---------------------------------------
 
 	/** @return string */

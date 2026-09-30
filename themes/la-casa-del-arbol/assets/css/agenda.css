@@ -16,8 +16,8 @@
  * front-end page and in the block editor.
  *
  * Contents
- *   1. Agenda header (eyebrow, month H1, filter chips)
- *   2. Event wall section
+ *   1. Agenda header (eyebrow, month H1, month navigation, filter chips)
+ *   2. Event wall section (and its empty state)
  */
 
 /* ==========================================================================
@@ -54,9 +54,66 @@ body .lcda-agenda-header .lcda-agenda-header__title + * {
 	margin-block-start: 28px;
 }
 
+/* Month navigation (E2.2, decision N6): "← Agosto" … "Octubre →" between
+   the H1 and the chips, secondary to the H1: the text-link style of the
+   back link (UI font, 12px, uppercase), 14px under the H1; the chips keep
+   their 28px from the element above them. */
+body .lcda-agenda-header .lcda-agenda-header__title + .lcda-agenda-nav {
+	margin-block-start: 14px;
+}
+
+body .lcda-agenda-header .lcda-agenda-nav + * {
+	margin-block-start: 28px;
+}
+
+.lcda-agenda-nav {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 8px 24px;
+}
+
+.lcda-agenda-nav__link--next {
+	margin-inline-start: auto;
+}
+
+.lcda-agenda-nav__link,
+.lcda-agenda-nav__link:hover,
+.lcda-agenda-nav__link:focus {
+	position: relative;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+
+/* Hit area at least 44px tall without changing the look (Handoff §1.20). */
+.lcda-agenda-nav__link::after {
+	content: "";
+	position: absolute;
+	inset: -16px -6px;
+}
+
 @media (max-width: 767px) {
 	.lcda-agenda-header {
 		--lcda-section-space-bottom: var(--lcda-space-30);
+	}
+
+	body .lcda-agenda-header .lcda-agenda-header__title + .lcda-agenda-nav {
+		margin-block-start: 12px;
+	}
+
+	body .lcda-agenda-header .lcda-agenda-nav + * {
+		margin-block-start: 22px;
+	}
+
+	.lcda-agenda-nav__link,
+	.lcda-agenda-nav__link:hover,
+	.lcda-agenda-nav__link:focus {
+		font-size: 11.5px;
 	}
 
 	body .lcda-agenda-header .lcda-eyebrow {
@@ -89,4 +146,15 @@ body .lcda-agenda-header .lcda-agenda-header__title + * {
 	.lcda-agenda-events {
 		--lcda-section-space-top: 28px;
 	}
+}
+
+/* Empty state (E2.2, decision N1), printed instead of the grid: one plain
+   sentence in the section's own rhythm. */
+body .lcda-agenda-empty {
+	margin-block: 0;
+	color: var(--lcda-ink);
+	font-family: var(--lcda-font-ui);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1.4;
 }

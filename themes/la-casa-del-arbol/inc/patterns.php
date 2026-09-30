@@ -15,23 +15,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Pattern categories.
  *
- * "lcda-demo" holds static demo/prototype content (demo events). Those
- * patterns are temporary; casa-eventos replaces them with real data that
- * follows docs/implementation/event-markup-contract.md.
+ * The theme ships no demo event patterns: events come from casa-eventos
+ * (docs/implementation/event-markup-contract.md).
  */
 function lcda_register_pattern_categories() {
 	register_block_pattern_category(
 		'lcda',
 		array(
 			'label' => __( 'La Casa del Árbol', 'la-casa-del-arbol' ),
-		)
-	);
-
-	register_block_pattern_category(
-		'lcda-demo',
-		array(
-			'label'       => __( 'La Casa del Árbol — Demo', 'la-casa-del-arbol' ),
-			'description' => __( 'Contenido de demostración temporal. Se reemplaza por datos reales de eventos.', 'la-casa-del-arbol' ),
 		)
 	);
 }

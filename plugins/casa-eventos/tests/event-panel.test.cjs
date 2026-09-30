@@ -150,6 +150,20 @@ test( 'external URL field only in external mode', () => {
 	assert.ok( texts( tree ).some( ( t ) => /enlace de venta externa/.test( t ) ), 'missing URL hinted' );
 } );
 
+test( 'tickets mode shows the informational hint, and only tickets mode', () => {
+	const s = base();
+	s.meta._casa_access_mode = 'tickets';
+	const notes = texts( setup( s ).plugins[ 'casa-eventos-datos' ]() );
+	assert.ok( notes.includes( 'La venta propia todavía no está disponible; el evento se publica sin botón de compra.' ), 'hint shown' );
+	[ 'whatsapp', 'external', '' ].forEach( ( mode ) => {
+		const t = base();
+		t.meta._casa_access_mode = mode;
+		assert.ok( ! texts( setup( t ).plugins[ 'casa-eventos-datos' ]() ).some( ( x ) => /venta propia/.test( x ) ), 'no hint for ' + ( mode || 'empty' ) );
+	} );
+	const select = find( setup( s ).plugins[ 'casa-eventos-datos' ](), 'SelectControl', 'Modalidad' );
+	assert.strictEqual( select.props.help, undefined, 'the old help text is gone (the hint replaces it)' );
+} );
+
 test( 'publish hints list what the server will require', () => {
 	const s = base();
 	s.title = '';

@@ -5,15 +5,16 @@
  * §1.3 and Website Direction.dc.html screens "03 Single Event" (desktop and
  * mobile). Contract: docs/implementation/single-event-contract.md.
  *
- * The page is two ordinary lcda-section > lcda-container blocks (layout
- * contract). This file only sets each section's vertical rhythm and the
- * related-events heading. The detail layout, poster, metadata, CTA row,
- * back link and cards are shared components (components.css §5–9).
+ * The page is two lcda-section > lcda-container sections (layout contract),
+ * rendered by single-casa_evento.php (template-parts/event/). This file
+ * only sets each section's vertical rhythm and the related-events heading.
+ * The detail layout, poster, metadata, CTA row, back link and cards are
+ * shared components (components.css §5–9).
  *
  * Same rules as components.css: style by lcda-* classes, "body" prefix to
  * beat core's layout margins, margin-block only, spacing from the
- * --lcda-space-* scale where the design uses one. Loaded on every
- * front-end page and in the block editor.
+ * --lcda-space-* scale where the design uses one. Loaded on Event singles
+ * only (inc/assets.php) and in the block editor.
  *
  * Contents
  *   1. Event main section (back link + detail)

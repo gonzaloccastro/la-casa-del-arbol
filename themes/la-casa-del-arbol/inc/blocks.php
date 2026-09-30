@@ -10,6 +10,9 @@
  *   one place and never written into pattern markup. With no menu assigned
  *   the button keeps whatever link the editor gave it (none by default).
  *
+ * It also holds the block helpers shared by the Agenda and Home render
+ * slots (inc/agenda.php, inc/home.php).
+ *
  * @package LaCasaDelArbol
  */
 
@@ -30,6 +33,21 @@ function lcda_block_has_class( $block, $class_name ) {
 	}
 
 	return in_array( $class_name, preg_split( '/\s+/', (string) $block['attrs']['className'] ), true );
+}
+
+/**
+ * Replace the inner HTML of a rendered block's outer element, keeping its
+ * opening tag (classes, anchor, attributes) and closing tag.
+ *
+ * @param string $html  Rendered block.
+ * @param string $inner New inner HTML (escaped).
+ * @return string|null Null when the block is not a single element.
+ */
+function lcda_replace_block_inner( $html, $inner ) {
+	if ( ! preg_match( '#^(\s*<([a-z][a-z0-9]*)\b[^>]*>).*(</\2>\s*)$#is', $html, $m ) ) {
+		return null;
+	}
+	return $m[1] . $inner . $m[3];
 }
 
 /**

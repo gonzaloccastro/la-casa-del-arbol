@@ -4,7 +4,7 @@
  * Slug: la-casa-del-arbol/home
  * Categories: lcda
  * Keywords: home, inicio, portada, página de inicio
- * Description: La Home aprobada completa: carrusel de portada, Eventos destacados del mes, ¡Festejá en el Árbol!, Seguinos en Instagram y Newsletter. Usar en una página con la plantilla "La Casa — Lienzo" (el header y el footer los pone la plantilla). Después se edita cada sección como cualquier bloque; cada una también está disponible como patrón suelto.
+ * Description: La Home aprobada completa: carrusel de portada, Eventos destacados (se completan solos desde Eventos y se ocultan si no hay destacados próximos), ¡Festejá en el Árbol!, Seguinos en Instagram y Newsletter. Usar en una página con la plantilla "La Casa — Lienzo" (el header y el footer los pone la plantilla). Después se edita cada sección como cualquier bloque; cada una también está disponible como patrón suelto.
  * Viewport Width: 1400
  * Block Types: core/post-content
  * Post Types: page

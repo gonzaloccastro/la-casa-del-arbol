@@ -1,7 +1,7 @@
 # casa-eventos contract (Event Core, E1)
 
-**Status:** v1.2, milestone E1 + E1.1 (roles and capabilities), plugin `casa-eventos` 0.1.0 (updated after the LocalWP runtime QA, WordPress 7.1.2). Source: `plugins/casa-eventos/`.
-**Inputs:** `ticketing-v1-contract.md` (functional contract), `content-ownership.md`, `event-markup-contract.md`, `home-contract.md`, `agenda-contract.md`, `single-event-contract.md`, the design-only architecture proposal (local report 16), the product decisions closed for E1 on 2026-09-27 and those closed for E1.1 on 2026-09-28 (paused events, categories, the Programador role).
+**Status:** v1.4, milestones E1 + E1.1 (roles and capabilities) + E2 (frontend integration: E2.1 public CTA decision, related rule, unlisted visibility; E2.2 Agenda query facades; E2.3 Home; E2.4 final review), **E2 complete** (2026-09-29). Plugin `casa-eventos` 0.2.0 with theme 0.7.0 (WordPress 7.1.2). Ticketing, WooCommerce, Payway and the custom Programador UI are not started. Source: `plugins/casa-eventos/`.
+**Inputs:** `ticketing-v1-contract.md` (functional contract), `content-ownership.md`, `event-markup-contract.md`, `home-contract.md`, `agenda-contract.md`, `single-event-contract.md`, the design-only architecture proposal (local report 16), the product decisions closed for E1 on 2026-09-27 those closed for E1.1 on 2026-09-28 (paused events, categories, the Programador role), and the E2 frontend decisions closed on 2026-09-28 (§15).
 
 This document records **approved** decisions only. Proposals that are still open are listed as open in the last section. Where it says "E2" or "commerce", the item is intentionally not implemented in E1.
 
@@ -133,7 +133,7 @@ Visibility by state (closed, E1.1):
 
 ## 7. Visibility and queries
 
-- `listed` = eligible for Agenda / Home / Related. An unlisted event stays reachable by its URL; its SEO treatment (noindex, sitemap) is E2.
+- `listed` = eligible for Agenda / Home / Related. An unlisted event stays public and reachable by its URL (never private, never 404). Its page is `noindex`, and it is excluded from the core sitemap and from the normal front-end search (§15, `inc/core/visibility.php`).
 - `featured` = eligible for Home featured events.
 - Ordering everywhere: `_casa_start_gmt` ASC, then post ID ASC (stable for same-minute events).
 
@@ -142,13 +142,15 @@ Query API (`CasaEventos\Core\Queries`, returns `Event[]`):
 | Function | Selection |
 |---|---|
 | `featured_events( [limit] )` | published, featured, **listed**, **active** (neither paused nor cancelled), effective end > now, nearest first |
-| `upcoming_events( [limit, exclude, include_cancelled, category] )` | published, listed, effective end > now |
-| `related_events( event, [limit] )` | `upcoming_events` excluding the event and cancelled events — **provisional default**, the related rule is E2 |
-| `month_events( 'YYYY-MM' )` | published, listed, local start inside the local month, **including past (historical) and cancelled events** |
-| `adjacent_event_month( 'YYYY-MM', ±1 )` | nearest earlier/later month that has published listed events |
+| `upcoming_events( [limit, exclude, include_cancelled, include_paused, category] )` | published, listed, effective end > now (paused and cancelled included by default) |
+| `related_events( event, [limit = 3] )` | `upcoming_events` excluding the event, **cancelled and paused** events: other upcoming listed events, nearest first (E2, decision N8) |
+| `month_events( 'YYYY-MM', [category] )` | published, listed, local start inside the local month, **including past (historical), paused and cancelled events**; chronological |
+| `adjacent_event_month( 'YYYY-MM', ±1, [category] )` | nearest earlier/later month that has published listed events (empty months skipped, history included); with a category, only events of that category count (same rule as `month_events`). One LIMIT 1 query (E2.2) |
 | `current_month()` | the current month in the venue timezone |
+| `parse_month( $raw )` | the month-key rule every month argument uses: `'YYYY-MM'` from 1970-01 to 9999-11, or null (E2.2) |
+| `categories()` | every category as `WP_Term[]`, in chip order (order meta, then name, then ID); terms only, no counts (E2.2) |
 
-These functions carry no presentation decisions (counts, fallbacks, empty states are E2).
+These functions carry no presentation decisions (counts, fallbacks and empty states belong to the frontend). Every public listing primes the featured-image caches of its results (`update_post_thumbnail_cache`), so rendering posters adds no query per card.
 
 ## 8. Editor
 
@@ -200,15 +202,11 @@ Event Core schedules nothing and sends nothing. WhatsApp URL integration is E2 a
 
 These supersede the "current/upcoming only" wording in `content-ownership.md` and `agenda-contract.md` for the dynamic Agenda. Those documents are reconciled in E2.
 
-**Also E2:** Related rule, CTA rendering (labels, WhatsApp/external destinations), state presentation (paused, cancelled, finished), unlisted SEO, single-event template and `lcda_is_canvas()` coverage, removal of the theme's demo patterns.
+**Also E2:** removal of the theme's demo patterns (done in E2.4). The related rule, CTA decision, state presentation, unlisted SEO, the single-event template and `lcda_is_canvas()` coverage were closed or delivered in E2.1 (§15).
 
 ## 13. Still open (not approved)
 
-- Frontend rendering responsibility (plugin blocks vs theme templates).
-- Agenda empty-month behavior and whether "next month" skips empty months (the query API supports both).
-- Whether the Cuándo text shows the end time.
-- Entry label default text and, in tickets mode, deriving it from ticket prices.
-- Agenda URL format for month/category (`?mes=YYYY-MM&categoria=slug` was proposed).
+- In tickets mode (commerce phase), whether the entry text is derived from ticket prices.
 - Plugin deployment workflow (the deploy script is theme-only).
 - Commerce decisions: Woo hold mechanism, XLSX writer, Payway gateway, commerce capabilities (orders, buyer lists, exports).
 - Programador access to synced patterns and user global styles in the editor (core gates both on the generic `edit_posts`; see §14).
@@ -286,3 +284,81 @@ Receives every Event and category capability in addition to its core capabilitie
 - The Programador should not need to understand CPTs, Gutenberg sidebar concepts, taxonomy administration, WooCommerce products/variations or internal metadata.
 - The form exposes event concepts directly: title, poster, existing-category selector, start/end, description, access mode, entry kind, capacity, visibility, operational state, and later ticket types.
 - No React/SPA tooling for it. It will use the same capabilities, validation (`validate_event_data`) and Event API as today.
+
+## 15. Frontend integration (E2)
+
+### Rendering responsibility (closed)
+
+The **theme renders** the frontend (templates, template parts, semantic markup, formatting, wording, CSS). casa-eventos supplies:
+- the Event read model;
+- the queries;
+- state, eligibility and business rules.
+
+The theme may use only `Event`, `Queries` and `POST_TYPE`. It never reads `_casa_*` meta, never queries events, and never re-derives a rule. This is enforced by `tests/check-architecture.php` rule 9 (see `event-markup-contract.md` "Rendering responsibility").
+
+### Public CTA decision: `Event::cta( $timestamp = null )` (E2.1)
+
+Rules: `cta_decision()` in `inc/core/state.php`. It returns a stable structure, independent of any wording:
+
+| Key | Values |
+|---|---|
+| `available` | bool: whether a live call to action may be offered now |
+| `mode` | `tickets` \| `whatsapp` \| `external` \| `''` |
+| `reason` | `available`; `no_mode` (no access mode); `no_target` (external without a usable URL); `not_on_sale` (tickets before own commerce); `sales_closed` (own tickets after the cutoff); or the non-actionable effective state: `draft`, `scheduled`, `paused`, `cancelled`, `finished` |
+| `state` | the effective state |
+| `url` | the external target when mode = external and available; `''` otherwise |
+
+- Only an **actionable** (active) event has an action.
+- `external` needs a usable (http/https) external URL.
+- `whatsapp` is allowed; the destination is the site's WhatsApp CTA, resolved by the frontend (§9: never an Event field).
+- `tickets` is unavailable until own commerce exists (`casa_eventos/ticket_sales_available`, default false; `Event::tickets_on_sale()`).
+- **The ticket sales cutoff applies only to own `tickets` sales**, never to `whatsapp` or `external` (decision N10).
+
+### Unlisted visibility (E2.1, decision N13): `inc/core/visibility.php`
+
+| | Listed event | Unlisted event |
+|---|---|---|
+| Single page | public, indexable | public (200), **noindex** (`wp_robots`) |
+| Core sitemap (`casa_evento`) | included | **excluded** (`wp_sitemaps_posts_query_args`; the page count uses the same arguments) |
+| Normal front-end search | included | **excluded** (main search query, not in wp-admin; other post types unaffected) |
+
+### Editor hint (E2.1, decision N11)
+
+When "Venta de entradas" is selected, the "Datos del evento" panel shows an informational notice: "La venta propia todavía no está disponible; el evento se publica sin botón de compra." It changes no validation and no permission.
+
+### Dynamic Agenda (E2.2)
+
+- Month keys: `parse_month()` accepts 1970-01 … 9999-11. 9999-12 is rejected because its end bound would be a 5-digit year, which sorts before every real date as a string (before E2.2, `adjacent_event_month( '9999-12', 1 )` returned the earliest month). `shift_month()` returns null outside 1970-01 … 9999-12.
+- The theme reads `?mes` through `Queries::parse_month()`, validates `?categoria` and orders the chips through `Queries::categories()`, lists one unfiltered `month_events()` per request and navigates with `adjacent_event_month()` (with the selected category). It picks the selected category's cards out of the month's events by `Event::category()`; it never re-derives eligibility, states or month boundaries.
+- URL model: `/agenda/`, `?mes=YYYY-MM`, `?categoria={slug}`, both; GET parameters only (no rewrite, no query var). Details: `agenda-contract.md` "Dynamic Agenda".
+
+### Dynamic Home (E2.3)
+
+- No plugin change: the theme calls `Queries::featured_events( array( 'limit' => 4 ) )` once per request. Eligibility (published, listed, featured, neither paused nor cancelled, not finished; a running event stays until its effective end), order (start, then ID) and cache priming are the plugin's.
+- With an empty result, or casa-eventos inactive, the theme leaves out the whole Home "Eventos destacados" section (N1). Details: `home-contract.md` "Eventos destacados: dynamic section".
+
+### E2 complete (E2.4 final review, 2026-09-29): plugin 0.2.0, theme 0.7.0
+
+- **Public API the theme uses** (the whole E2 surface): `Event::get()` and the read-model getters allowed by architecture rule 9; `Queries::featured_events()`, `month_events()`, `adjacent_event_month()` (with `category`), `related_events()`, `categories()`, `parse_month()`, `current_month()`; `POST_TYPE` (template condition). No other plugin symbol, no `_casa_*` key, no event query in the theme (enforced by rule 9; re-verified with exact counts in the final review).
+- **Plugin inactive** (deactivated, never uninstalled): the theme sees no API (`lcda_events_available()` false). Home: the whole featured section is left out. Agenda: the heading keeps its authored text; no chips, navigation, cards or empty-state message; WordPress's canonical. Event URLs: the post type is unregistered, so `/evento/{slug}/` is WordPress's ordinary 404 (no fatal, no Event markup). Reactivation restores the role and capabilities unchanged.
+- **Legacy pages:** Home 0.4.x and Agenda 0.5.0 pages are taken over at render time by class (`event-markup-contract.md` "Structural class contracts"); the deleted demo pattern files are not needed.
+- **Full-page caching:** Home eligibility, the Agenda's current month and every state shown on Home/Agenda/Single are computed per request. A production full-page cache can serve stale views until it expires; its TTL or bypass for these pages must be reviewed at deployment (`docs/deployment.md`, "E2 release checklist"). No cache code is added.
+- **Versions:** plugin 0.1.0 → 0.2.0 (header, `CASA_EVENTOS_VERSION`, readme; enforced by architecture rule 7), theme 0.6.0 → 0.7.0. The capability version (`CAPS_VERSION` 1) is unchanged: E2 changed no role or capability.
+
+### Closed E2 product decisions (2026-09-28)
+
+| # | Decision | Where / status |
+|---|---|---|
+| N1 | Home with zero eligible featured events: hide the whole "Eventos destacados" section. Agenda empty month: "No hay eventos programados para este mes." Empty selected category: "No hay eventos de esta categoría para este mes." | Home E2.3 (live; also when casa-eventos is inactive); Agenda E2.2 (live) |
+| N2 | Single state notes: cancelled "Evento cancelado", paused "Reservas pausadas", finished "Este evento ya pasó". Agenda: cancelled cards show a visible "Cancelado" marker; paused and finished cards get no special treatment. | Single: E2.1 (live). Agenda: E2.2 (live; red tag in the card header) |
+| N3 | No "Compartir" in E2; no share mechanism, no inert control. | E2.1 (live) |
+| N4 | Home featured cards show a compact date + time (unambiguous across months), not weekday/time only. | E2.3 (live: "Sáb 03/10 · 21:00", featured card only) |
+| N5 | Agenda H1: month only in the current year ("Septiembre"); month + year otherwise ("Diciembre 2025"). | E2.2 (live) |
+| N6 | Month navigation: secondary text links ("← Agosto" / "Octubre →") between the H1 and the chips, subordinate to the H1. Targets: the nearest months with events, of the selected category when there is one (E2.2 decision U1); a missing side is left out. | E2.2 (live) |
+| N7 | Single shows a declared end only (same day: start → end time; other day: both dates); never the derived +3 h end. | E2.1 (live) |
+| N8 | `related_events()` excludes the current, cancelled and paused events; upcoming, listed, nearest first. | E2.1 (live) |
+| N9 | Agenda chips: "Todos" + only the categories represented in the selected month, in plugin chip order. A valid selected category without events in the month keeps its (active) chip (U2); a month without events has no chip list (U3). | E2.2 (live) |
+| N10 | The sales cutoff applies only to own `tickets` sales; whatsapp/external stay actionable while the event is actionable and has a target. | E2.1 (live, plugin) |
+| N11 | Active `tickets` before commerce: no purchase control, the note "Entradas a la venta próximamente"; editor hint for tickets mode. | E2.1 (live) |
+| N12 | Home section eyebrow: "Próximas fechas". | E2.3 (live in the pattern; H2 "Eventos destacados". Home pages built before E2.3: one-time manual edit, decision S1, `home-contract.md`) |
+| N13 | Listed: indexable, in the sitemap and search. Unlisted: reachable, noindex, out of the sitemap and search. | E2.1 (live, plugin) |

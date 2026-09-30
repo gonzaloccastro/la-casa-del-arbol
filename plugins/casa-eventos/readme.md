@@ -1,12 +1,14 @@
 # Casa Eventos
 
-**Version:** 0.1.0 (milestone E1, Event Core)
+**Version:** 0.2.0 (milestone E2, frontend integration; E1 Event Core in 0.1.0)
 **Requires:** WordPress 6.6+ (developed against 7.1.2), PHP 8.0+ (tested with 8.2). No other plugins; **WooCommerce is not required**.
 **Contract:** `docs/implementation/casa-eventos-contract.md` in the repository.
 
-Eventos de La Casa del Árbol: la entidad Evento, sus categorías, fechas, estados, visibilidad y consultas. Es la única fuente de verdad de los eventos; Home, Agenda y la página del evento van a leer de acá (fase E2). El theme `la-casa-del-arbol` sigue siendo solo presentación.
+Eventos de La Casa del Árbol: la entidad Evento, sus categorías, fechas, estados, visibilidad y consultas. Es la única fuente de verdad de los eventos; Home, Agenda y la página del evento leen de acá (fase E2, completa). El theme `la-casa-del-arbol` sigue siendo solo presentación.
 
-E1 no tiene salida en el frontend, no crea productos de WooCommerce y no vende entradas.
+El plugin no imprime markup en el frontend: el theme arma la página del evento, la Agenda y los destacados de la Home con la API pública (`Event`, `Queries`). El plugin sí decide visibilidad (noindex, sitemap y búsqueda de los ocultos). No crea productos de WooCommerce y no vende entradas.
+
+Caché: la Home, la Agenda y la página del evento se calculan en cada visita con el estado real de los eventos. Si producción usa caché de página completa, revisar su duración o excluir esas páginas antes de publicar (ver `docs/deployment.md` en el repositorio).
 
 ## Qué agrega en wp-admin
 
@@ -33,7 +35,12 @@ Para dar de alta a alguien: Usuarios → Añadir nuevo → Perfil: **Programador
 - Los borradores pueden estar incompletos. **Publicar o programar** exige: título, inicio, modalidad, una sola categoría, enlace en venta externa, fin posterior al inicio, aforo ≥ 1 y cierre de venta no posterior al fin. El servidor lo valida (el editor muestra el motivo).
 - Fechas: hora local + zona horaria del evento (se captura al primer guardado). Sin fin, el evento dura 3 horas a efectos de "finalizado". Un evento pertenece al día y mes en que **empieza** (domingo 00:30 es domingo).
 - Aforo vacío = 100, guardado en el evento. Cierre de venta vacío = 1 hora antes del inicio (se calcula). Puede ser posterior al inicio (con aviso), nunca al fin.
-- Estados: *finalizado* se deriva de la fecha. *Pausado* y *cancelado* siguen públicos en la Agenda y sin acciones, y **nunca aparecen en Destacados de la Home**. Solo un administrador puede reactivar un evento cancelado. Cancelar nunca reembolsa nada.
+- Estados: *finalizado* se deriva de la fecha. *Pausado* y *cancelado* siguen públicos en la Agenda y sin acciones, y **nunca aparecen en Destacados de la Home ni en "También en la agenda"**. Solo un administrador puede reactivar un evento cancelado. Cancelar nunca reembolsa nada.
+- Botón de la página del evento:
+  - **Reservar** (WhatsApp) o **Comprar entradas** (venta externa) solo si el evento está activo y tiene destino.
+  - **Venta de entradas** propia todavía no existe: el evento se publica sin botón de compra ("Entradas a la venta próximamente"), y el editor lo avisa.
+  - El cierre de venta solo aplica a la venta propia de entradas.
+- **No visible en la Agenda** (oculto): la página sigue accesible por enlace, pero no se indexa y no aparece en el sitemap ni en la búsqueda del sitio.
 
 ## Para desarrolladores
 
@@ -55,6 +62,7 @@ inc/core/                 Event Core: único código que conoce el esquema (_cas
   uuid.php                UUID inmutable y único
   class-event.php         modelo de lectura (Event)
   queries.php             API de consultas (Queries)
+  visibility.php          eventos ocultos: noindex, fuera del sitemap y de la búsqueda
   rest.php                campo REST de solo lectura casa_event
   settings.php            opción del lugar
   capabilities.php        capacidades propias de Evento y Categoría, rol Programador (instalación/actualización)
@@ -76,9 +84,13 @@ $event->effective_state();  // draft | scheduled | active | paused | cancelled |
 $event->is_actionable();    // true solo si está activo
 
 Queries::featured_events( array( 'limit' => 4 ) );   // solo activos: sin pausados ni cancelados
-Queries::month_events( Queries::current_month() );
-Queries::adjacent_event_month( '2026-09', -1 );
-Queries::related_events( $event );   // regla provisoria (E2)
+Queries::month_events( Queries::current_month() );   // el mes local: listados, con historia, pausados y cancelados
+Queries::adjacent_event_month( '2026-09', -1 );      // mes anterior con eventos (saltea los vacíos)
+Queries::adjacent_event_month( '2026-09', 1, array( 'category' => 'cine' ) );   // … de esa categoría
+Queries::parse_month( $_GET['mes'] ?? null );        // 'YYYY-MM' válido (1970-01 … 9999-11) o null
+Queries::categories();               // todas las categorías (WP_Term[]) en el orden de los chips
+Queries::related_events( $event );   // otros próximos, sin pausados ni cancelados (máx. 3)
+$event->cta();                       // ¿hay botón? available, mode, reason (estado, no_target, not_on_sale…), url
 ```
 
 Hooks: `casa_eventos/loaded`, `casa_eventos/event_synced`, `casa_eventos/schedule_changed`, `casa_eventos/event_cancelled`, `casa_eventos/event_reactivated`, `casa_eventos/uuid_regenerated`; filtros `casa_eventos/validate_event`, `casa_eventos/default_capacity`, `casa_eventos/default_duration_minutes`, `casa_eventos/default_sales_close_offset_minutes`, `casa_eventos/fallback_timezone`, `casa_eventos/reactivate_capability`.

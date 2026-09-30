@@ -117,14 +117,14 @@ foreach ( array_merge( $php, $js ) as $file ) {
 	}
 }
 
-// 7. Version 0.1.0 everywhere.
+// 7. Version 0.2.0 everywhere.
 ++$checks;
 $main = file_get_contents( $plugin . '/casa-eventos.php' );
 preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $main, $header );
 preg_match( "/define\( 'CASA_EVENTOS_VERSION', '([^']+)' \)/", $main, $constant );
 preg_match( '/Version:\s*\*{0,2}\s*([0-9.]+)/', (string) @file_get_contents( $plugin . '/readme.md' ), $readme );
 $versions = array( $header[1] ?? '?', $constant[1] ?? '?', $readme[1] ?? '?' );
-if ( array( '0.1.0', '0.1.0', '0.1.0' ) !== $versions ) {
+if ( array( '0.2.0', '0.2.0', '0.2.0' ) !== $versions ) {
 	$errors[] = 'version mismatch (header, constant, readme): ' . implode( ', ', $versions );
 }
 
@@ -136,12 +136,74 @@ foreach ( array( 'package.json', 'composer.json', 'node_modules', 'vendor', 'web
 	}
 }
 
-// 9. The theme stays presentation-only: no event CPT/meta/taxonomy/query.
+/**
+ * Rule 9: the theme renders events only through the documented public API
+ * (CasaEventos\Core\Event, CasaEventos\Core\Queries, and POST_TYPE for
+ * template conditions). It never registers the domain, reads event meta,
+ * queries events itself, names the schema, or re-derives Event Core rules
+ * (dates → finished, sales cutoff, access-mode targets): those come from
+ * Event::cta() / effective_state() and the queries.
+ *
+ * @param string $code Source without comments.
+ * @return string[] Violations.
+ */
+function theme_domain_violations( $code ) {
+	$out = array();
+	$forbidden = array(
+		'registers the domain'          => '/\bregister_(post_type|taxonomy|post_meta|term_meta|meta)\s*\(/',
+		'names event meta keys'         => '/_casa_/',
+		'reads or writes meta directly' => '/\b(get|update|add|delete)_(post|term)_meta\s*\(|\bget_metadata\s*\(/',
+		'hard-codes the schema'         => '/[\'"]casa_(evento|categoria)[\'"]/',
+		'duplicates an Event Core rule' => '/->\s*(is_before_sales_close|sales_close\w*|tickets_on_sale|ends_gmt|end_gmt|start_gmt|effective_end|is_finished|is_actionable|capacity|validation|external_url|access_mode|status)\s*\(/',
+	);
+	foreach ( $forbidden as $what => $re ) {
+		if ( preg_match( $re, $code, $m ) ) {
+			$out[] = $what . ' (' . trim( $m[0] ) . ')';
+		}
+	}
+	if ( preg_match_all( '/\\\\?CasaEventos\\\\[A-Za-z_\\\\]+/', $code, $all ) ) {
+		foreach ( array_unique( $all[0] ) as $symbol ) {
+			if ( ! preg_match( '/^\\\\?CasaEventos\\\\Core\\\\(Event|Queries|POST_TYPE)$/', $symbol ) ) {
+				$out[] = 'uses a non-public plugin symbol (' . $symbol . ')';
+			}
+		}
+		if ( preg_match( '/\bnew\s+\\\\?WP_Query\b|\bget_posts\s*\(|\bquery_posts\s*\(|[\'"]pre_get_posts[\'"]/', $code, $m ) ) {
+			$out[] = 'queries events directly (' . trim( $m[0] ) . ')';
+		}
+	}
+	return $out;
+}
+
+// Self-test of rule 9 (allowed and forbidden samples).
+$rule9_samples = array(
+	'<?php use CasaEventos\Core\Event; $e = Event::get( get_post() ); echo $e->title(); $c = $e->cta();'           => 0,
+	'<?php $r = \CasaEventos\Core\Queries::related_events( $e ); is_singular( \CasaEventos\Core\POST_TYPE );'      => 0,
+	'<?php $x = new WP_Query( array( "post_type" => "page" ) );'                                                    => 0,
+	'<?php register_post_type( "x", array() );'                                                                     => 1,
+	'<?php get_post_meta( $id, "_casa_start", true );'                                                              => 2,
+	'<?php is_singular( "casa_evento" );'                                                                           => 1,
+	'<?php use CasaEventos\Core\Event; $q = new WP_Query( array() );'                                               => 1,
+	'<?php use CasaEventos\Core\Queries; get_posts( array() );'                                                     => 1,
+	'<?php \CasaEventos\Core\categories();'                                                                         => 1,
+	'<?php $t = \CasaEventos\Core\Queries::categories(); $m = \CasaEventos\Core\Queries::parse_month( $raw );'     => 0,
+	'<?php $m = \CasaEventos\Core\parse_month( $raw );'                                                             => 1,
+	'<?php get_term_meta( $term->term_id, "order", true );'                                                         => 1,
+	'<?php if ( $event->is_before_sales_close() ) {}'                                                               => 1,
+	'<?php $u = $event->external_url(); $m = $event->access_mode();'                                                => 1,
+);
+foreach ( $rule9_samples as $sample => $expected ) {
+	++$checks;
+	if ( count( theme_domain_violations( $sample ) ) !== $expected ) {
+		$errors[] = 'rule 9 self-test: expected ' . $expected . ' violation(s) for ' . $sample . ', got ' . implode( '; ', theme_domain_violations( $sample ) );
+	}
+}
+
+// 9. The theme stays presentation-only (see theme_domain_violations()).
 if ( is_dir( $theme ) ) {
 	foreach ( source_files( $theme, array( 'php' ) ) as $file ) {
 		++$checks;
-		if ( preg_match( '/casa_evento|casa_categoria|_casa_|register_post_type|register_taxonomy|register_post_meta|CasaEventos\\\\/', code_only( $file ), $m ) ) {
-			$errors[] = 'theme ' . substr( $file, strlen( $theme ) + 1 ) . ': event domain code in the theme (' . $m[0] . ')';
+		foreach ( theme_domain_violations( code_only( $file ) ) as $violation ) {
+			$errors[] = 'theme ' . substr( $file, strlen( $theme ) + 1 ) . ': ' . $violation;
 		}
 	}
 }

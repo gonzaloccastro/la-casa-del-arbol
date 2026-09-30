@@ -169,6 +169,11 @@
 					__( 'El cierre de venta es posterior al inicio del evento.', 'casa-eventos' ) ) );
 			}
 		}
+		if ( accessMode === config.values.tickets ) {
+			// Informational only: tickets mode stays valid and publishable.
+			notices.push( el( components.Notice, { key: 'tickets', status: 'info', isDismissible: false },
+				__( 'La venta propia todavía no está disponible; el evento se publica sin botón de compra.', 'casa-eventos' ) ) );
+		}
 		if ( hints.length ) {
 			notices.push( el( components.Notice, { key: 'hints', status: 'info', isDismissible: false },
 				sprintf( __( 'Para publicar falta: %s.', 'casa-eventos' ), hints.join( ', ' ) ) ) );
@@ -201,9 +206,6 @@
 				label: __( 'Modalidad de acceso *', 'casa-eventos' ),
 				value: accessMode,
 				options: withEmpty( config.accessModes, __( '— Elegir —', 'casa-eventos' ) ),
-				help: accessMode === config.values.tickets
-					? __( 'La venta propia de entradas llega en una fase posterior: hoy no se crea ningún producto ni se vende desde el sitio.', 'casa-eventos' )
-					: '',
 				onChange: function ( v ) {
 					setMeta( K.accessMode, v );
 				},

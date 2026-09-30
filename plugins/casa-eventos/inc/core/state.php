@@ -84,6 +84,77 @@ function is_actionable_state( $state ) {
 	return STATE_ACTIVE === $state;
 }
 
+// Reasons of a CTA decision (cta_decision()). A non-actionable event uses
+// its effective state as the reason: draft, scheduled, paused, cancelled,
+// finished.
+const CTA_AVAILABLE    = 'available';
+const CTA_NO_MODE      = 'no_mode';
+const CTA_NO_TARGET    = 'no_target';
+const CTA_NOT_ON_SALE  = 'not_on_sale';
+const CTA_SALES_CLOSED = 'sales_closed';
+
+/**
+ * Whether the public call to action of an event is available, and why not.
+ *
+ * - The event must be actionable (effective state active).
+ * - external: needs a usable external URL, returned as the target.
+ * - whatsapp: allowed; the destination is the site's WhatsApp CTA, which
+ *   the frontend resolves (never an Event field).
+ * - tickets: own ticket sales. Unavailable until commerce exists; then the
+ *   ticket sales cutoff applies. The cutoff applies to own ticket sales
+ *   only, never to whatsapp or external.
+ *
+ * @param string $state            Effective state.
+ * @param string $mode             Access mode ('' when not set).
+ * @param string $external_url     Sanitized external URL ('' when none).
+ * @param bool   $tickets_on_sale  Whether own ticket sales exist.
+ * @param bool   $before_close     Whether the ticket sales cutoff is ahead.
+ * @return array{available: bool, mode: string, reason: string, state: string, url: string}
+ */
+function cta_decision( $state, $mode, $external_url, $tickets_on_sale, $before_close ) {
+	$mode     = in_array( $mode, access_modes(), true ) ? $mode : '';
+	$decision = array(
+		'available' => false,
+		'mode'      => $mode,
+		'reason'    => CTA_AVAILABLE,
+		'state'     => (string) $state,
+		'url'       => '',
+	);
+
+	if ( ! is_actionable_state( $state ) ) {
+		$decision['reason'] = (string) $state;
+		return $decision;
+	}
+
+	switch ( $mode ) {
+		case ACCESS_EXTERNAL:
+			if ( '' === (string) $external_url ) {
+				$decision['reason'] = CTA_NO_TARGET;
+				return $decision;
+			}
+			$decision['url'] = (string) $external_url;
+			break;
+		case ACCESS_WHATSAPP:
+			break;
+		case ACCESS_TICKETS:
+			if ( ! $tickets_on_sale ) {
+				$decision['reason'] = CTA_NOT_ON_SALE;
+				return $decision;
+			}
+			if ( ! $before_close ) {
+				$decision['reason'] = CTA_SALES_CLOSED;
+				return $decision;
+			}
+			break;
+		default:
+			$decision['reason'] = CTA_NO_MODE;
+			return $decision;
+	}
+
+	$decision['available'] = true;
+	return $decision;
+}
+
 /**
  * Human label of an effective state (admin).
  *

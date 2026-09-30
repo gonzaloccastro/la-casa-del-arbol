@@ -76,6 +76,16 @@ t_eq( null, parse_month( array() ), 'non-string rejected' );
 t_eq( array( '2026-12-01 00:00:00', '2027-01-01 00:00:00' ), month_bounds( '2026-12' ), 'December bounds cross the year' );
 t_eq( '2025-12', shift_month( '2026-01', -1 ), 'previous month across the year' );
 t_eq( '2027-09', shift_month( '2026-09', 12 ), 'twelve months ahead' );
+// E2.2 (R0): no month key whose end bound would be a 5-digit year.
+t_eq( null, parse_month( '9999-12' ), '9999-12 rejected: its end bound would be year 10000' );
+t_eq( '9999-11', parse_month( '9999-11' ), '9999-11 is the last valid month' );
+t_eq( array( '9999-11-01 00:00:00', '9999-12-01 00:00:00' ), month_bounds( '9999-11' ), 'the last valid month still has 4-digit bounds' );
+t_eq( null, month_bounds( '9999-12' ), 'no bounds for 9999-12' );
+t_eq( '9999-12', shift_month( '9999-11', 1 ), 'the end bound month of 9999-11' );
+t_eq( null, shift_month( '9999-11', 2 ), 'no key past 9999-12' );
+t_eq( null, shift_month( '1970-01', -1 ), 'no key before 1970-01' );
+t_eq( null, parse_month( '1969-12' ), 'before 1970 rejected' );
+t_eq( '1970-01', parse_month( '1970-01' ), '1970-01 is the first valid month' );
 t_eq( '2026-09', current_month_in( $ba, gmmktime( 2, 0, 0, 10, 1, 2026 ) ), 'venue month when GMT is already October' );
 $bounds = month_bounds( '2026-09' );
 $start  = '2026-09-30 23:30:00';

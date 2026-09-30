@@ -82,8 +82,9 @@ function sanitize_text_field( $str ) {
 function esc_url_raw( $url ) {
 	return (string) $url;
 }
+/** Like core: percent-encoded octets (non-ASCII slugs) are kept, lowercased. */
 function sanitize_title( $title ) {
-	return strtolower( preg_replace( '/[^a-z0-9-]+/i', '-', (string) $title ) );
+	return strtolower( preg_replace( '/(?:%(?![a-f0-9]{2})|[^a-z0-9%-])+/i', '-', (string) $title ) );
 }
 function wp_unslash( $value ) {
 	return is_string( $value ) ? stripslashes( $value ) : $value;
@@ -146,6 +147,10 @@ function get_the_terms( $post ) {
 	}
 	return $out ?: false;
 }
+/** All terms of $GLOBALS['t_term_objects'] (unordered, like core without orderby meta). */
+function get_terms( array $args = array() ) {
+	return array_values( $GLOBALS['t_term_objects'] ?? array() );
+}
 function get_term_meta( $id, $key ) {
 	return $GLOBALS['t_term_meta'][ (int) $id ][ $key ] ?? ( '_casa_color' === $key ? 'mint' : '' );
 }
@@ -168,9 +173,11 @@ class WP_Post {
 class WP_Term {
 	public $term_id;
 	public $name;
-	public function __construct( $id, $name ) {
+	public $slug;
+	public function __construct( $id, $name, $slug = null ) {
 		$this->term_id = $id;
 		$this->name    = $name;
+		$this->slug    = null === $slug ? sanitize_title( $name ) : $slug;
 	}
 }
 class WP_Error {
@@ -430,14 +437,30 @@ function register_term_meta( $taxonomy, $key, array $args ) {
 	$GLOBALS['t_registered']['term_meta'][ $key ] = $args;
 }
 
+// ----- Front-end conditionals / caches used by visibility.php and queries.php ----------
+
+function is_singular( $post_type = '' ) {
+	return isset( $GLOBALS['t_singular'] ) && ( '' === $post_type || $GLOBALS['t_singular'] === $post_type );
+}
+function get_queried_object() {
+	return get_post( $GLOBALS['t_queried'] ?? 0 );
+}
+/** Records each priming call with the IDs of the queried posts. */
+function update_post_thumbnail_cache( $query ) {
+	$GLOBALS['t_thumb_primed'][] = array_map( static fn( $p ) => $p->ID, $query->posts );
+}
+
 // ----- WP_Query stand-in: evaluates the meta queries the Query API builds -----------------
 
 /**
  * Supports what inc/core/queries.php uses: post_type, post_status,
- * posts_per_page, post__not_in, nested AND meta clauses with =, !=, IN,
- * NOT IN, >, >=, <, BETWEEN, EXISTS (string comparison, like type CHAR),
- * and orderby start_order/ID. tax_query is ignored. The last query's args
- * are kept in $GLOBALS['t_last_query'].
+ * posts_per_page, post__not_in, nested meta clauses (AND / OR relations)
+ * with =, !=, IN, NOT IN, >, >=, <, BETWEEN, EXISTS, NOT EXISTS (string
+ * comparison, like type CHAR),
+ * tax_query by slug (field 'slug', terms from $GLOBALS['t_term_objects'],
+ * AND of its clauses), and orderby: an ordered list of named top-level meta
+ * clauses and ID, each ASC or DESC (default start_order ASC, ID ASC).
+ * The last query's args are kept in $GLOBALS['t_last_query'].
  */
 class WP_Query {
 	public $posts       = array();
@@ -459,14 +482,33 @@ class WP_Query {
 			if ( isset( $args['meta_query'] ) && ! t_meta_query_matches( $id, $args['meta_query'] ) ) {
 				continue;
 			}
+			if ( isset( $args['tax_query'] ) && ! t_tax_query_matches( $id, $args['tax_query'] ) ) {
+				continue;
+			}
 			$ids[] = $id;
 		}
-		$order = $args['orderby']['start_order'] ?? 'ASC';
+		$orderby = (array) ( $args['orderby'] ?? array() );
+		$orderby = $orderby ?: array( 'start_order' => 'ASC', 'ID' => 'ASC' );
+		$meta    = (array) ( $args['meta_query'] ?? array() );
 		usort(
 			$ids,
-			static function ( $a, $b ) use ( $order ) {
-				$cmp = strcmp( (string) get_post_meta( $a, '_casa_start_gmt' ), (string) get_post_meta( $b, '_casa_start_gmt' ) ) ?: $a <=> $b;
-				return 'DESC' === $order ? -$cmp : $cmp;
+			static function ( $a, $b ) use ( $orderby, $meta ) {
+				foreach ( $orderby as $name => $order ) {
+					if ( 'ID' === $name ) {
+						$cmp = $a <=> $b;
+					} else {
+						// Without a named clause, start_order keeps the old default (start GMT).
+						$key = $meta[ $name ]['key'] ?? ( 'start_order' === $name ? '_casa_start_gmt' : null );
+						if ( null === $key ) {
+							throw new LogicException( 'orderby names an unknown meta clause: ' . $name );
+						}
+						$cmp = strcmp( (string) get_post_meta( $a, $key ), (string) get_post_meta( $b, $key ) );
+					}
+					if ( 0 !== $cmp ) {
+						return 'DESC' === strtoupper( (string) $order ) ? -$cmp : $cmp;
+					}
+				}
+				return 0;
 			}
 		);
 		$this->found_posts = count( $ids );
@@ -478,65 +520,78 @@ class WP_Query {
 	}
 }
 function t_meta_query_matches( $id, array $query ) {
+	$or      = 'OR' === strtoupper( (string) ( $query['relation'] ?? 'AND' ) );
+	$results = array();
 	foreach ( $query as $key => $clause ) {
 		if ( 'relation' === $key ) {
 			continue;
 		}
-		if ( ! isset( $clause['key'] ) ) {
-			if ( ! t_meta_query_matches( $id, $clause ) ) {
-				return false; // Nested groups are AND in the Query API.
-			}
+		$results[] = isset( $clause['key'] ) ? t_meta_clause_matches( $id, $clause ) : t_meta_query_matches( $id, $clause );
+	}
+	if ( ! $results ) {
+		return true;
+	}
+	return $or ? in_array( true, $results, true ) : ! in_array( false, $results, true );
+}
+function t_tax_query_matches( $id, array $query ) {
+	$slugs = array();
+	foreach ( wp_get_object_terms( $id ) as $term_id ) {
+		if ( isset( $GLOBALS['t_term_objects'][ $term_id ] ) ) {
+			$slugs[] = $GLOBALS['t_term_objects'][ $term_id ]->slug;
+		}
+	}
+	foreach ( $query as $key => $clause ) {
+		if ( 'relation' === $key ) {
 			continue;
 		}
-		$exists  = metadata_exists( 'post', $id, $clause['key'] );
-		$value   = (string) get_post_meta( $id, $clause['key'] );
-		$compare = $clause['compare'] ?? '=';
-		if ( 'EXISTS' === $compare ) {
-			$ok = $exists;
-		} elseif ( ! $exists ) {
-			$ok = false; // Like the SQL join: a missing key never matches.
-		} else {
-			$want = $clause['value'];
-			switch ( $compare ) {
-				case '=':
-					$ok = $value === (string) $want;
-					break;
-				case '!=':
-					$ok = $value !== (string) $want;
-					break;
-				case 'IN':
-					$ok = in_array( $value, array_map( 'strval', (array) $want ), true );
-					break;
-				case 'NOT IN':
-					$ok = ! in_array( $value, array_map( 'strval', (array) $want ), true );
-					break;
-				case '>':
-					$ok = strcmp( $value, (string) $want ) > 0;
-					break;
-				case '>=':
-					$ok = strcmp( $value, (string) $want ) >= 0;
-					break;
-				case '<':
-					$ok = strcmp( $value, (string) $want ) < 0;
-					break;
-				case 'BETWEEN':
-					$ok = strcmp( $value, (string) $want[0] ) >= 0 && strcmp( $value, (string) $want[1] ) <= 0;
-					break;
-				default:
-					throw new LogicException( 'unsupported compare ' . $compare );
-			}
+		if ( 'slug' !== ( $clause['field'] ?? '' ) ) {
+			throw new LogicException( 'tax_query stand-in supports field slug only' );
 		}
-		if ( ! $ok ) {
+		if ( ! array_intersect( array_map( 'strval', (array) $clause['terms'] ), $slugs ) ) {
 			return false;
 		}
 	}
 	return true;
 }
+function t_meta_clause_matches( $id, array $clause ) {
+	$exists  = metadata_exists( 'post', $id, $clause['key'] );
+	$compare = $clause['compare'] ?? '=';
+	if ( 'EXISTS' === $compare ) {
+		return $exists;
+	}
+	if ( 'NOT EXISTS' === $compare ) {
+		return ! $exists;
+	}
+	if ( ! $exists ) {
+		return false; // Like the SQL join: a missing key never matches.
+	}
+	$value = (string) get_post_meta( $id, $clause['key'] );
+	$want  = $clause['value'];
+	switch ( $compare ) {
+		case '=':
+			return $value === (string) $want;
+		case '!=':
+			return $value !== (string) $want;
+		case 'IN':
+			return in_array( $value, array_map( 'strval', (array) $want ), true );
+		case 'NOT IN':
+			return ! in_array( $value, array_map( 'strval', (array) $want ), true );
+		case '>':
+			return strcmp( $value, (string) $want ) > 0;
+		case '>=':
+			return strcmp( $value, (string) $want ) >= 0;
+		case '<':
+			return strcmp( $value, (string) $want ) < 0;
+		case 'BETWEEN':
+			return strcmp( $value, (string) $want[0] ) >= 0 && strcmp( $value, (string) $want[1] ) <= 0;
+	}
+	throw new LogicException( 'unsupported compare ' . $compare );
+}
 
 // ----- Load the plugin's core ----------------------------------------------------------
 
 $core = dirname( __DIR__ ) . '/inc/core/';
-foreach ( array( 'schema', 'datetime', 'state', 'validation', 'settings', 'capabilities', 'post-type', 'taxonomy', 'meta', 'class-event', 'sync', 'uuid', 'enforcement', 'rest', 'queries' ) as $file ) {
+foreach ( array( 'schema', 'datetime', 'state', 'validation', 'settings', 'capabilities', 'post-type', 'taxonomy', 'meta', 'class-event', 'sync', 'uuid', 'enforcement', 'rest', 'queries', 'visibility' ) as $file ) {
 	require_once $core . $file . '.php';
 }
 

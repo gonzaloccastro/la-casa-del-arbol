@@ -6,9 +6,10 @@
  * and actions, collected in this file. Astra itself is never edited.
  * Verified against Astra 4.13.x.
  *
- * On Lienzo pages the theme owns the page: Astra's layout is forced to full
- * width, and Astra's header and footer are replaced by the V1 site chrome
- * (template-parts/site/). Other pages keep Astra's defaults for now.
+ * On Lienzo pages and Event singles the theme owns the page: Astra's layout
+ * is forced to full width, and Astra's header and footer are replaced by the
+ * V1 site chrome (template-parts/site/). Other pages keep Astra's defaults
+ * for now.
  *
  * @package LaCasaDelArbol
  */
@@ -18,12 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Whether the current request renders the full-bleed Lienzo template.
+ * Whether the current request renders a full-bleed La Casa page: a page
+ * with the Lienzo template, or an Event single (single-casa_evento.php,
+ * same frame).
  *
  * @return bool
  */
 function lcda_is_canvas() {
-	return is_page_template( 'page-templates/canvas.php' );
+	return is_page_template( 'page-templates/canvas.php' ) || lcda_is_event_single();
 }
 
 /**

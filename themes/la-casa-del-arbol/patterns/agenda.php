@@ -4,7 +4,7 @@
  * Slug: la-casa-del-arbol/agenda
  * Categories: lcda
  * Keywords: agenda, eventos, mes, página, mosaico
- * Description: La Agenda aprobada completa: encabezado (volanta, mes y categorías) y el mosaico de eventos. Usar en la página Agenda con la plantilla "La Casa — Lienzo" (el header y el footer los pone la plantilla). El mes se edita acá. Las tarjetas son de demostración: los eventos reales se van a cargar desde Eventos (casa-eventos), que reemplaza el mosaico automáticamente.
+ * Description: La Agenda completa: encabezado (volanta, mes, navegación entre meses y categorías) y el mosaico de eventos. Usar en la página Agenda (slug "agenda") con la plantilla "La Casa — Lienzo" (el header y el footer los pone la plantilla). El mes, las categorías y las tarjetas se generan solos con los eventos cargados en Eventos; en la página solo se edita la volanta.
  * Viewport Width: 1400
  * Block Types: core/post-content
  * Post Types: page

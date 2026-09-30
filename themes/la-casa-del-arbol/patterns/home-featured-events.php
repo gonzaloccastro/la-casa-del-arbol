@@ -1,17 +1,20 @@
 <?php
 /**
- * Title: Home — Eventos destacados del mes
+ * Title: Home — Eventos destacados
  * Slug: la-casa-del-arbol/home-featured-events
  * Categories: lcda
  * Keywords: eventos, destacados, agenda, tarjetas, afiches, home, inicio
- * Description: Sección "Eventos destacados del mes": volanta con el mes, título, enlace "Ver agenda completa →" (solo en computadora), 4 tarjetas de evento y botón "Ver toda la agenda". Las tarjetas son contenido de demostración: en cada una elegí el afiche, reemplazá los textos y enlazá el título a la página del evento. Actualizá la volanta cada mes.
+ * Description: Sección "Eventos destacados": volanta, título, enlace "Ver agenda completa →" (solo en computadora), hasta 4 tarjetas de evento y botón "Ver toda la agenda". Las tarjetas se generan solas con los próximos eventos marcados como destacados en Eventos: el texto que se ve acá en el editor no se publica. Si no hay eventos destacados próximos, la sección entera no se muestra.
  * Viewport Width: 1400
  * Inserter: yes
  *
- * Presentational until casa-eventos exists: the cards are the demo grid
- * (patterns/demo-event-grid-featured.php, included below so the demo
- * markup lives in one file). casa-eventos later outputs real events into
- * the same lcda-event-grid--featured markup (event-markup-contract.md).
+ * The lcda-event-grid--featured group is a render slot (inc/home.php,
+ * E2.3): at render time its content is replaced by the featured event
+ * cards from casa-eventos, and the whole section is left out when there
+ * are none (or casa-eventos is inactive). The paragraph inside is an
+ * editor-only note and is never published. Pages built from Home 0.4.x
+ * still hold the 4 demo cards in this group; the slot replaces them too
+ * (home-contract.md). The eyebrow and heading are page content.
  *
  * The Agenda links point at the page with the slug "agenda" when it
  * exists, resolved when the pattern is inserted; otherwise they are left
@@ -28,11 +31,11 @@ $lcda_agenda_href = ( $lcda_agenda && 'publish' === $lcda_agenda->post_status ) 
 <div class="wp-block-group lcda-container"><!-- wp:group {"className":"lcda-section-heading"} -->
 <div class="wp-block-group lcda-section-heading"><!-- wp:group {"className":"lcda-section-heading__text"} -->
 <div class="wp-block-group lcda-section-heading__text"><!-- wp:paragraph {"className":"lcda-eyebrow"} -->
-<p class="lcda-eyebrow">Septiembre 2026</p>
+<p class="lcda-eyebrow">Próximas fechas</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"className":"lcda-section-heading__title"} -->
-<h2 class="wp-block-heading lcda-section-heading__title">Eventos destacados del mes</h2>
+<h2 class="wp-block-heading lcda-section-heading__title">Eventos destacados</h2>
 <!-- /wp:heading --></div>
 <!-- /wp:group -->
 
@@ -43,7 +46,11 @@ $lcda_agenda_href = ( $lcda_agenda && 'publish' === $lcda_agenda->post_status ) 
 <!-- /wp:buttons --></div>
 <!-- /wp:group -->
 
-<?php require __DIR__ . '/demo-event-grid-featured.php'; ?>
+<!-- wp:group {"align":"wide","className":"lcda-event-grid lcda-event-grid--featured"} -->
+<div class="wp-block-group alignwide lcda-event-grid lcda-event-grid--featured"><!-- wp:paragraph -->
+<p>Los eventos destacados se cargan automáticamente desde Eventos. Este texto no se publica.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
 
 <!-- wp:buttons {"className":"lcda-section-actions","layout":{"type":"flex","justifyContent":"center"}} -->
 <div class="wp-block-buttons lcda-section-actions"><!-- wp:button {"className":"is-style-lcda-dark"} -->

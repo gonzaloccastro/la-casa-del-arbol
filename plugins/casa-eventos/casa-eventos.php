@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Casa Eventos
  * Description:       Eventos de La Casa del Árbol: entidad Evento, categorías, estados, fechas y consultas (Event Core).
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.6
  * Requires PHP:      8.0
  * Author:            La Casa del Árbol
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CASA_EVENTOS_VERSION', '0.1.0' );
+define( 'CASA_EVENTOS_VERSION', '0.2.0' );
 define( 'CASA_EVENTOS_FILE', __FILE__ );
 define( 'CASA_EVENTOS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CASA_EVENTOS_URL', plugin_dir_url( __FILE__ ) );
@@ -40,6 +40,7 @@ require_once CASA_EVENTOS_DIR . 'inc/core/uuid.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/enforcement.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/rest.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/queries.php';
+require_once CASA_EVENTOS_DIR . 'inc/core/visibility.php';
 
 // Programador navigation (menu, admin bar): every request, since the admin
 // bar is also shown on the public site. Presentation only.

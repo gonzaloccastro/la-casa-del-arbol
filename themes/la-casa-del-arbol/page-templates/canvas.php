@@ -5,7 +5,8 @@
  *
  * Full-bleed canvas: no Astra title, sidebar or content width. The page is
  * built entirely from Gutenberg blocks and patterns; each section controls
- * its own width and gutters. Used by Home, Agenda and the demo event page.
+ * its own width and gutters. Used by Home, Agenda and the other designed
+ * pages. Event singles use the same frame (single-casa_evento.php).
  *
  * @package LaCasaDelArbol
  */

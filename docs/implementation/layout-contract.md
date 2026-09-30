@@ -1,6 +1,6 @@
 # Layout contract (widths, gutters, spacing, sections)
 
-**Status:** v1, Step 3.1. CSS in `themes/la-casa-del-arbol/assets/css/base.css` (tokens, Lienzo column, `lcda-section`, `lcda-container`, `lcda-reading`) and `theme.json` (layout sizes, spacing presets).
+**Status:** v1.1, Step 3.1 (E2.4: pattern table updated after the demo patterns were deleted). CSS in `themes/la-casa-del-arbol/assets/css/base.css` (tokens, Lienzo column, `lcda-section`, `lcda-container`, `lcda-reading`) and `theme.json` (layout sizes, spacing presets).
 **Design source:** `docs/design/Final Design Handoff.md` §1.3 (spacing), §1.4 (gutters and widths), §1.21 (breakpoints).
 
 Editors compose pages from sections and patterns. Widths, gutters and vertical rhythm come from these rules, not from per-block margins.
@@ -80,11 +80,11 @@ Components set only `margin-block`, never `margin-inline`, so they never undo th
 | Encabezado de sección | `alignwide` section heading | inside a section, or directly on a page (container column) |
 | Home sections (Step 4): Carrusel de portada, Eventos destacados, ¡Festejá en el Árbol!, Seguinos en Instagram, Newsletter; and Home (página completa) | built on the rows above | see `home-contract.md` |
 | Agenda sections (Step 5): Agenda — Encabezado, Agenda — Mosaico de eventos; and Agenda (página completa) | built on the rows above | see `agenda-contract.md` |
-| Evento (página de demostración) (Step 6, category Demo) | two sections on the rows above | visual QA only, see `single-event-contract.md` |
+| Single Event (E2.1): not a pattern; `single-casa_evento.php` renders two sections on the rows above (the Step 6 demo pattern was deleted in E2.4) | two sections on the rows above | see `single-event-contract.md` |
 
 Two section-level primitives were added in Step 4 (`components.css`): `lcda-section-heading--band` (the heading is a band's whole content: text + action centered, gap L, no margin below) and `lcda-section-actions` (closing action row, 36 / 24 above it, the design's value for "Ver toda la agenda").
 
-The demo event grids (category "Demo") are `alignwide` grids with the right card variant: `lcda-event-grid--featured`, `--agenda`, `--related`. See `event-markup-contract.md`.
+Event grids are `alignwide` grids with the right card variant: `lcda-event-grid--featured` (Home), `--agenda` (Agenda), `--related` (Single). Since E2 they are filled from casa-eventos; the demo grid patterns were deleted in E2.4. See `event-markup-contract.md`.
 
 ## Rules
 
