@@ -230,11 +230,23 @@ function lcda_event_poster_html( $event, $context = 'card' ) {
 }
 
 /**
+ * WhatsApp destination of an Event's reservation CTA: the La Casa number
+ * (+54 9 11 4038-5603) with the event title in the opening message.
+ *
+ * @param \CasaEventos\Core\Event $event Event.
+ * @return string Unescaped URL (escape on output).
+ */
+function lcda_event_whatsapp_url( $event ) {
+	$message = sprintf( 'Hola! Me interesaba la actividad %s', $event->title() );
+	return 'https://wa.me/5491140385603?text=' . rawurlencode( $message );
+}
+
+/**
  * The primary action of the Single, from the plugin's CTA decision.
  *
  * The plugin decides whether an action exists (state, mode, target,
  * tickets before commerce). The theme only words it and resolves the
- * WhatsApp destination from the site's WhatsApp CTA menu location.
+ * WhatsApp destination (lcda_event_whatsapp_url()).
  *
  * @param \CasaEventos\Core\Event $event Event.
  * @return array{type: string, label?: string, attributes?: string, text?: string}|null
@@ -252,14 +264,17 @@ function lcda_event_action( $event ) {
 			);
 		}
 		if ( 'whatsapp' === $cta['mode'] ) {
-			$link = lcda_get_location_link( 'lcda-cta' );
-			if ( null !== $link && '' !== esc_url( $link['url'] ) ) {
-				return array(
-					'type'       => 'link',
-					'label'      => __( 'Reservar', 'la-casa-del-arbol' ),
-					'attributes' => lcda_link_attributes( $link ),
-				);
-			}
+			return array(
+				'type'       => 'link',
+				'label'      => __( 'Reservar', 'la-casa-del-arbol' ),
+				'attributes' => lcda_link_attributes(
+					array(
+						'url'    => lcda_event_whatsapp_url( $event ),
+						'target' => '_blank',
+						'rel'    => 'noopener noreferrer',
+					)
+				),
+			);
 		}
 		// Own ticket sales (commerce phase) render their purchase control here.
 		return null;

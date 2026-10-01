@@ -8,7 +8,8 @@
     Read docs/deployment.md before running this script.
 
     What it deploys: ONLY the committed contents of themes/la-casa-del-arbol/
-    at the current Git HEAD (packaged with "git archive"). Uncommitted changes
+    at the current Git HEAD (packaged with "git archive"), except its tests/
+    directory (local tests, never deployed). Uncommitted changes
     are never deployed; the script refuses to run if the theme directory has
     any.
 
@@ -80,6 +81,9 @@ $ErrorActionPreference = 'Stop'
 $ThemeSlug          = 'la-casa-del-arbol'
 $ThemeRelPath       = 'themes/la-casa-del-arbol'
 $ConfigFileName     = 'deploy.local.ps1'
+# Theme paths (relative to the theme root) that stay in the repository but are
+# never packaged or deployed: local tests only.
+$PackageExcludeDirs = @('tests')
 $RequiredConfigKeys = @('RemoteHost', 'RemotePort', 'RemoteUser', 'RemoteHome', 'RemoteWpRoot', 'RemoteThemeDir')
 
 # Files that must exist locally (and in HEAD) for a deploy to be allowed.
@@ -590,6 +594,9 @@ try {
     }
 
     $headFiles = @(Get-NativeOutput 'git' @('-C', $repoRoot, 'ls-tree', '-r', '--name-only', "HEAD:$ThemeRelPath"))
+    foreach ($dir in $PackageExcludeDirs) {
+        $headFiles = @($headFiles | Where-Object { -not ([string] $_).StartsWith("$dir/") })
+    }
     foreach ($file in $RequiredFiles) {
         if ($headFiles -notcontains $file) { Stop-Deploy "required file not committed in HEAD: $file" }
     }
@@ -607,7 +614,19 @@ try {
     $package = Join-Path $tempDir 'theme.tar'
 
     # core.autocrlf/eol overrides: archive the blobs exactly as committed (LF).
-    Invoke-Native 'git' @('-C', $repoRoot, '-c', 'core.autocrlf=false', '-c', 'core.eol=lf', 'archive', '--format=tar', '-o', $package, "HEAD:$ThemeRelPath")
+    # Pathspecs are relative to the archived tree (the theme root).
+    $excludeSpecs = @($PackageExcludeDirs | ForEach-Object { ":(exclude)$_" })
+    Invoke-Native 'git' (@('-C', $repoRoot, '-c', 'core.autocrlf=false', '-c', 'core.eol=lf', 'archive', '--format=tar', '-o', $package, "HEAD:$ThemeRelPath", '--') + $excludeSpecs)
+    # Fail closed: nothing excluded may be in the package, and the package must
+    # hold exactly the files counted above.
+    # Relative path: a drive letter makes GNU tar read "C:" as a remote host.
+    Push-Location -LiteralPath $tempDir
+    try { $packaged = @(Get-NativeOutput 'tar' @('-tf', 'theme.tar') | Where-Object { -not "$_".EndsWith('/') }) }
+    finally { Pop-Location }
+    foreach ($dir in $PackageExcludeDirs) {
+        if (@($packaged | Where-Object { "$_".StartsWith("$dir/") }).Count -gt 0) { Stop-Deploy "the package contains excluded path: $dir/" }
+    }
+    if ($packaged.Count -ne $headFiles.Count) { Stop-Deploy "package has $($packaged.Count) files, expected $($headFiles.Count)" }
     $packageSha = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
     $packageKb = [math]::Round((Get-Item -LiteralPath $package).Length / 1KB, 1)
     Write-Info "Deployment id: $stamp"

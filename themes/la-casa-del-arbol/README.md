@@ -77,7 +77,7 @@ Child theme de Astra para lacasadelarbol.org. Implementa el Design V1 aprobado
   Detalle: `docs/implementation/agenda-contract.md`.
 - **Página de evento**: cada evento se carga en **Eventos** (`casa-eventos`) y su página (`/evento/…`) se arma sola con el
   diseño aprobado.
-  - El botón es "Reservar" (WhatsApp, destino del menú **La Casa — CTA WhatsApp**) o "Comprar entradas" (venta externa).
+  - El botón es "Reservar" (WhatsApp: wa.me/5491140385603 con el mensaje "Hola! Me interesaba la actividad {título del evento}", en pestaña nueva) o "Comprar entradas" (venta externa).
   - Un evento pausado, cancelado o pasado muestra un aviso en lugar del botón.
   - No hay "Compartir".
   - El patrón de demostración "Evento (página de demostración)" se borró en E2.4. Si en un sitio quedó una página de
