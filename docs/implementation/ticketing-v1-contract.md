@@ -559,6 +559,8 @@ Quedan expresamente fuera:
 
 ## 21. Prioridad de implementación
 
+Esta secuencia registra la prioridad original del contrato y **no es el roadmap vigente**. El roadmap y el estado de las fases se consultan en [docs/project-status.md](../project-status.md). Esta aclaración no modifica ninguna decisión funcional de Ticketing V1.
+
 Orden recomendado:
 
 1.  Entidad Evento y estados.

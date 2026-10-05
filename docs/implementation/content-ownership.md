@@ -6,9 +6,9 @@ The rule: **the theme owns presentation.** It owns section layout, headings, mar
 
 ## Ownership map
 
-| Area | Single source of truth / owner | Theme owns | Status in 0.4.x |
+| Area | Single source of truth / owner | Theme owns | Status (E2 complete) |
 |---|---|---|---|
-| Event data (title, poster, date/time, category, entrada/access, ticket info, CTA, featured flag) | **Event entity** in the future `casa-eventos` plugin (with WooCommerce for stock/orders) | card, grid and detail markup + CSS (`event-markup-contract.md`) | presentational placeholder cards only |
+| Event data (title, poster, date/time, category, entrada/access, ticket info, CTA, featured flag) | **Event entity** in the implemented `casa-eventos` plugin (WooCommerce for stock/orders remains planned for commerce) | card, grid and detail markup + CSS (`event-markup-contract.md`) | Event Core implemented in E1; real Event views implemented in E2 |
 | Home "Eventos destacados" | a **projection/query of Event data** (`Queries::featured_events()`, max 4) | the section: heading (page content), "Ver agenda" actions, grid container, rhythm | dynamic since E2.3: cards from casa-eventos; the whole section hidden with no eligible events (`home-contract.md`) |
 | Agenda (archive) | a projection/query of Event data | page header, filter chip presentation, masonry | dynamic since E2.2: month, navigation, chips and cards from casa-eventos (`agenda-contract.md` "Dynamic Agenda") |
 | Single Event | the Event entity itself; the description is the Event's own block content | detail layout and components, section headings, `single-casa_evento.php` and its template parts | **live since E2.1**: the theme renders real Events from the casa-eventos public API (`single-event-contract.md` "Dynamic implementation") |
@@ -19,15 +19,15 @@ The rule: **the theme owns presentation.** It owns section layout, headings, mar
 ## Events: single source of truth
 
 - The **Event entity is the only place event data is edited.** Home, Agenda, Single Event and Related all read the same Event records. No page stores its own copy of an event's title, poster, date, category or access information.
-- **Home featured events are a query, not content.** The intended model, to be implemented in `casa-eventos` and not in the theme:
+- **Home featured events are a query, not content.** The model is implemented in `casa-eventos`, not in the theme (`casa-eventos-contract.md` §7 and §15):
   - an Event has a boolean such as `featured_on_home`;
   - Home shows published Events where that flag is true **and** that are current or upcoming;
   - order is chronological, nearest first;
   - past events drop out automatically, even if the flag stays on; nobody has to un-feature them;
-  - the number shown and the empty state (no featured upcoming events) are decided with that implementation.
+  - E2.3 shows up to 4 events and hides the whole section when empty (`home-contract.md`).
 - **Agenda** consumes the same Event data (published, listed, chronological, one local month at a time, history included), not a separate list. Since E2.2 the theme fills the `lcda-event-grid--agenda` group, the `lcda-filter-chips` list and the month heading from casa-eventos at render time (also on pages still holding the 0.5.0 demo cards); the sections stay (`agenda-contract.md`).
 - **Home (E2.3):** only the event grid output inside the Home section (`lcda-event-grid--featured` and its cards) is rendered from casa-eventos, with the shared card markup (`event-markup-contract.md`); the section around it stays as the approved design (`lcda-section`, heading, "Ver agenda completa →", "Ver toda la agenda") and is left out entirely when there is nothing to show. Demo cards stored in Home 0.4.x pages are discarded at render time; nothing is migrated from them. The demo grid pattern files were deleted from the theme in E2.4.
-- The theme never registers event CPTs, meta, taxonomies or queries (CLAUDE.md, `event-markup-contract.md`).
+- The theme never registers event CPTs, meta, taxonomies or queries (`casa-eventos-contract.md`, `event-markup-contract.md`).
 
 ## Instagram: external-plugin boundary
 
