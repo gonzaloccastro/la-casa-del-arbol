@@ -38,6 +38,7 @@ require_once CASA_EVENTOS_DIR . 'inc/core/class-event.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/sync.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/uuid.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/enforcement.php';
+require_once CASA_EVENTOS_DIR . 'inc/core/event-write.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/rest.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/queries.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/visibility.php';

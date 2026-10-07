@@ -39,11 +39,17 @@ function uuid_internal_write( $set = null ) {
  *
  * @param int    $post_id Event ID.
  * @param string $uuid    UUID.
+ * @return bool Whether the requested UUID is stored.
  */
 function write_uuid( $post_id, $uuid ) {
 	uuid_internal_write( true );
-	update_post_meta( $post_id, META_UUID, $uuid );
-	uuid_internal_write( false );
+	try {
+		update_post_meta( $post_id, META_UUID, $uuid );
+	} finally {
+		uuid_internal_write( false );
+	}
+	return metadata_exists( 'post', $post_id, META_UUID )
+		&& $uuid === get_post_meta( $post_id, META_UUID, true );
 }
 
 /**
@@ -91,7 +97,7 @@ function uuid_holders( $uuid ) {
  * Give an event a UUID when it has none, and resolve duplicates.
  *
  * @param int $post_id Event ID.
- * @return array|null What changed: ['old' => ..., 'new' => ...], or null.
+ * @return array|\WP_Error|null What changed: ['old' => ..., 'new' => ...], or null.
  */
 function ensure_uuid( $post_id ) {
 	$post_id = (int) $post_id;
@@ -99,7 +105,9 @@ function ensure_uuid( $post_id ) {
 
 	if ( '' === $current ) {
 		$uuid = new_uuid();
-		write_uuid( $post_id, $uuid );
+		if ( ! write_uuid( $post_id, $uuid ) ) {
+			return new \WP_Error( 'casa_eventos_uuid_failed', __( 'No se pudo guardar la identidad del evento.', 'casa-eventos' ) );
+		}
 		return array(
 			'old' => '',
 			'new' => $uuid,
@@ -107,14 +115,14 @@ function ensure_uuid( $post_id ) {
 	}
 
 	$changed = resolve_uuid_collision( $current );
-	return $changed[ $post_id ] ?? null;
+	return is_wp_error( $changed ) ? $changed : ( $changed[ $post_id ] ?? null );
 }
 
 /**
  * Keep a duplicated UUID only on the oldest event (lowest ID).
  *
  * @param string $uuid UUID.
- * @return array<int,array{old:string,new:string}> Regenerated events.
+ * @return array<int,array{old:string,new:string}>|\WP_Error Regenerated events or persistence failure.
  */
 function resolve_uuid_collision( $uuid ) {
 	$holders = uuid_holders( $uuid );
@@ -125,7 +133,9 @@ function resolve_uuid_collision( $uuid ) {
 	array_shift( $holders ); // The lowest ID keeps the UUID.
 	foreach ( $holders as $holder_id ) {
 		$fresh = new_uuid();
-		write_uuid( $holder_id, $fresh );
+		if ( ! write_uuid( $holder_id, $fresh ) ) {
+			return new \WP_Error( 'casa_eventos_uuid_failed', __( 'No se pudo resolver la identidad duplicada del evento.', 'casa-eventos' ) );
+		}
 		$changed[ $holder_id ] = array(
 			'old' => $uuid,
 			'new' => $fresh,

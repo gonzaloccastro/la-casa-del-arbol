@@ -23,11 +23,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * A failed sync is partial, never a successful lifecycle transition.
+ * The failure action lets hook-driven callers receive the same WP_Error
+ * returned to direct callers; no rollback is attempted.
+ */
+function sync_persistence_error( $post_id, $key ) {
+	$error = new \WP_Error(
+		'casa_eventos_sync_failed',
+		__( 'La sincronización del evento no quedó completa; requiere revisión.', 'casa-eventos' ),
+		array( 'id' => (int) $post_id, 'partial' => true, 'meta_key' => $key )
+	);
+	do_action( 'casa_eventos/event_sync_failed', (int) $post_id, $error );
+	return $error;
+}
+
+/** Verify storage, not update_post_meta's ambiguous false/no-change return. */
+function persist_sync_meta( $post_id, $key, $value ) {
+	update_post_meta( $post_id, $key, $value );
+	return metadata_exists( 'post', $post_id, $key )
+		&& (string) $value === (string) get_post_meta( $post_id, $key, true );
+}
+
+/**
  * Recompute an event's derived data and fire lifecycle actions.
  *
  * @param int      $post_id   Event ID.
  * @param int|null $timestamp Now (unix); defaults to time(). For tests.
- * @return array|null Changes applied, or null when the post is not a real event.
+ * @return array|\WP_Error|null Changes applied, persistence error, or null for a skipped post.
  */
 function sync_event( $post_id, $timestamp = null ) {
 	$post = get_post( $post_id );
@@ -39,6 +61,9 @@ function sync_event( $post_id, $timestamp = null ) {
 
 	// Identity.
 	$uuid_change = ensure_uuid( $post_id );
+	if ( is_wp_error( $uuid_change ) ) {
+		return sync_persistence_error( $post_id, META_UUID );
+	}
 	if ( $uuid_change ) {
 		$changes['uuid'] = $uuid_change;
 	}
@@ -46,7 +71,9 @@ function sync_event( $post_id, $timestamp = null ) {
 	$tz = sanitize_timezone( get_post_meta( $post_id, META_TIMEZONE, true ) );
 	if ( '' === $tz ) {
 		$tz = timezone_for_new_event();
-		update_post_meta( $post_id, META_TIMEZONE, $tz );
+		if ( ! persist_sync_meta( $post_id, META_TIMEZONE, $tz ) ) {
+			return sync_persistence_error( $post_id, META_TIMEZONE );
+		}
 		$changes['timezone'] = $tz;
 	}
 
@@ -59,7 +86,9 @@ function sync_event( $post_id, $timestamp = null ) {
 	);
 	foreach ( $defaults as $key => $default ) {
 		if ( ! metadata_exists( 'post', $post_id, $key ) ) {
-			update_post_meta( $post_id, $key, $default );
+			if ( ! persist_sync_meta( $post_id, $key, $default ) ) {
+				return sync_persistence_error( $post_id, $key );
+			}
 			$changes['materialized'][] = $key;
 		}
 	}
@@ -84,7 +113,9 @@ function sync_event( $post_id, $timestamp = null ) {
 	foreach ( $keys as $field => $key ) {
 		// Stored even when '' so admin ordering by start never drops an event.
 		if ( $old[ $field ] !== $new[ $field ] || ! metadata_exists( 'post', $post_id, $key ) ) {
-			update_post_meta( $post_id, $key, $new[ $field ] );
+			if ( ! persist_sync_meta( $post_id, $key, $new[ $field ] ) ) {
+				return sync_persistence_error( $post_id, $key );
+			}
 		}
 	}
 	$schedule_changed = $old !== $new;
@@ -100,13 +131,19 @@ function sync_event( $post_id, $timestamp = null ) {
 	$cancelled_gmt = sanitize_gmt_datetime( get_post_meta( $post_id, META_CANCELLED_GMT, true ) );
 	$lifecycle     = '';
 	if ( STATUS_CANCELLED === $status && '' === $cancelled_gmt ) {
-		update_post_meta( $post_id, META_CANCELLED_GMT, now_gmt( $timestamp ) );
+		if ( ! persist_sync_meta( $post_id, META_CANCELLED_GMT, now_gmt( $timestamp ) ) ) {
+			return sync_persistence_error( $post_id, META_CANCELLED_GMT );
+		}
 		$lifecycle = 'cancelled';
 	} elseif ( STATUS_CANCELLED !== $status && '' !== $cancelled_gmt ) {
-		update_post_meta( $post_id, META_CANCELLED_GMT, '' );
+		if ( ! persist_sync_meta( $post_id, META_CANCELLED_GMT, '' ) ) {
+			return sync_persistence_error( $post_id, META_CANCELLED_GMT );
+		}
 		$lifecycle = 'reactivated';
 	} elseif ( ! metadata_exists( 'post', $post_id, META_CANCELLED_GMT ) ) {
-		update_post_meta( $post_id, META_CANCELLED_GMT, '' );
+		if ( ! persist_sync_meta( $post_id, META_CANCELLED_GMT, '' ) ) {
+			return sync_persistence_error( $post_id, META_CANCELLED_GMT );
+		}
 	}
 	if ( $lifecycle ) {
 		$changes['lifecycle'] = $lifecycle;

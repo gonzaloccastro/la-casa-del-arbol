@@ -266,19 +266,32 @@ function guard_admin_publish( $data, $postarr ) {
 	}
 
 	$post = empty( $postarr['ID'] ) ? null : get_post( (int) $postarr['ID'] );
-	if ( ! $post instanceof WP_Post ) {
+	if ( ! $post instanceof WP_Post && ! isset( $postarr['meta_input'] ) ) {
 		return $data;
 	}
 
-	$validation          = stored_validation_data( $post, $data['post_status'] );
+	// Validate submitted meta alongside stored values: an operational save
+	// must not be blocked by stale dates when it publishes an Event.
+	$validation = $post instanceof WP_Post
+		? stored_validation_data( $post, $data['post_status'] )
+		: empty_validation_data();
+	$validation['target_status'] = $data['post_status'];
 	$validation['title'] = wp_unslash( (string) ( $data['post_title'] ?? '' ) );
+	$validation['can_reactivate'] = current_user_can( reactivate_capability() );
+	$schema_errors = array();
+	if ( isset( $postarr['meta_input'] ) && is_array( $postarr['meta_input'] ) ) {
+		$meta = wp_unslash( $postarr['meta_input'] );
+		$schema_errors = request_meta_schema_errors( $meta );
+		$validation = apply_request_meta( $validation, $meta );
+	}
 	if ( isset( $postarr['tax_input'][ TAXONOMY ] ) ) {
 		$validation['category_ids'] = existing_category_ids( (array) $postarr['tax_input'][ TAXONOMY ] );
 	}
 
 	$result = validate_event_data( $validation );
-	if ( $result['errors'] ) {
-		$error = validation_error( $result['errors'], $data['post_status'] );
+	$errors = array_merge( $schema_errors, $result['errors'] );
+	if ( $errors ) {
+		$error = validation_error( $errors, $data['post_status'] );
 		wp_die(
 			esc_html( $error->get_error_message() ),
 			esc_html__( 'Evento incompleto', 'casa-eventos' ),

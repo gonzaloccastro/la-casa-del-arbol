@@ -87,7 +87,7 @@ function sanitize_title( $title ) {
 	return strtolower( preg_replace( '/(?:%(?![a-f0-9]{2})|[^a-z0-9%-])+/i', '-', (string) $title ) );
 }
 function wp_unslash( $value ) {
-	return is_string( $value ) ? stripslashes( $value ) : $value;
+	return is_array( $value ) ? array_map( 'wp_unslash', $value ) : ( is_string( $value ) ? stripslashes( $value ) : $value );
 }
 function wp_generate_uuid4() {
 	$b    = random_bytes( 16 );
@@ -104,7 +104,8 @@ $GLOBALS['t_caps']    = array( 'manage_options' => false, 'edit_post' => true );
 function get_option( $name, $default = false ) {
 	return $GLOBALS['t_options'][ $name ] ?? $default;
 }
-function current_user_can( $cap ) {
+function current_user_can( $cap, ...$args ) {
+	if ( in_array( $cap, array( 'edit_post', 'read_post' ), true ) && isset( $args[0] ) && in_array( $args[0], $GLOBALS['t_denied_posts'] ?? array(), true ) ) { return false; }
 	return ! empty( $GLOBALS['t_caps'][ $cap ] );
 }
 function user_can( $user, $cap ) {
@@ -163,6 +164,10 @@ class WP_Post {
 	public $post_status  = 'draft';
 	public $post_title   = '';
 	public $post_excerpt = '';
+	public $post_content = '';
+	public $post_date = '';
+	public $post_date_gmt = '';
+	public $post_mime_type = '';
 	public $post_author  = 0;
 	public function __construct( array $data ) {
 		foreach ( $data as $k => $v ) {
@@ -271,6 +276,7 @@ function get_post_meta( $id, $key, $single = false ) {
 	return t_meta_default( $key ); // Registered default, like get_metadata_default().
 }
 function update_post_meta( $id, $key, $value, $prev = '' ) {
+	$value = wp_unslash( $value );
 	$check = apply_filters( 'update_post_metadata', null, $id, $key, $value, $prev );
 	if ( null !== $check ) {
 		return (bool) $check;
@@ -588,10 +594,91 @@ function t_meta_clause_matches( $id, array $clause ) {
 	throw new LogicException( 'unsupported compare ' . $compare );
 }
 
+
+/**
+ * E3.1 persistence stand-ins: exercise WordPress slashing/filter/lifecycle
+ * boundaries and inject failures. Not a real DB, KSES or revision engine.
+ */
+function remove_filter( $hook, $callback, $priority = 10 ) {
+	foreach ( $GLOBALS['t_hooks'][ $hook ][ $priority ] ?? array() as $i => $entry ) {
+		if ( $entry[0] === $callback ) {
+			unset( $GLOBALS['t_hooks'][ $hook ][ $priority ][ $i ] );
+		}
+	}
+}
+function wp_slash( $value ) {
+	return is_array( $value ) ? array_map( 'wp_slash', $value ) : ( is_string( $value ) ? addslashes( $value ) : $value );
+}
+function has_blocks( $content ) {
+	return false !== strpos( $content, '<!-- wp:' );
+}
+function get_post_thumbnail_id( $post ) {
+	$post = get_post( $post );
+	return $post ? (int) get_post_meta( $post->ID, '_thumbnail_id', true ) : 0;
+}
+function wp_attachment_is_image( $id ) {
+	return 0 === strpos( get_post( $id )->post_mime_type ?? '', 'image/' );
+}
+function wp_get_attachment_image( $id, $size ) {
+	return wp_attachment_is_image( $id ) && empty( $GLOBALS['t_unusable_images'][ $id ] ) ? '<img>' : '';
+}
+function sanitize_post_field( $field, $value, $id, $context ) {
+	return apply_filters( $field . '_save_pre', $value );
+}
+function wp_timezone() {
+	return new DateTimeZone( $GLOBALS['t_options']['timezone_string'] ?: 'UTC' );
+}
+function wp_date( $format, $timestamp = null, $timezone = null ) {
+	return ( new DateTimeImmutable( '@' . ( null === $timestamp ? time() : $timestamp ) ) )
+		->setTimezone( $timezone ?: wp_timezone() )->format( $format );
+}
+function wp_update_post( $arr, $wp_error = false, $fire_after_hooks = true ) {
+	$post = get_post( $arr['ID'] );
+	return wp_insert_post( array_merge( wp_slash( get_object_vars( $post ) ), $arr ), $wp_error, $fire_after_hooks );
+}
+function wp_insert_post( $arr, $wp_error = false, $fire_after_hooks = true ) {
+	$GLOBALS['t_write_calls'][] = $arr;
+	if ( 'post' === ( $GLOBALS['t_persist_failure'] ?? '' ) ) {
+		return new WP_Error( 'db_insert_error', 'Injected post failure.' );
+	}
+	$before = empty( $arr['ID'] ) ? null : clone get_post( $arr['ID'] );
+	$row = array_merge( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => '', 'post_excerpt' => '', 'post_content' => '' ), $arr );
+	foreach ( array( 'post_title', 'post_excerpt', 'post_content' ) as $column ) {
+		$row[ $column ] = sanitize_post_field( $column, $row[ $column ], $arr['ID'] ?? 0, 'db' );
+	}
+	if ( apply_filters( 'wp_insert_post_empty_content', ! $row['post_title'] && ! $row['post_content'] && ! $row['post_excerpt'], $row ) ) {
+		return new WP_Error( 'empty_content', 'Empty content.' );
+	}
+	if ( 'publish' === $row['post_status'] && ! empty( $row['post_date_gmt'] ) && $row['post_date_gmt'] > gmdate( 'Y-m-d H:i:s', time() + 60 ) ) {
+		$row['post_status'] = 'future';
+	} elseif ( 'future' === $row['post_status'] && ! empty( $row['post_date_gmt'] ) && $row['post_date_gmt'] < gmdate( 'Y-m-d H:i:s' ) ) {
+		$row['post_status'] = 'publish';
+	}
+	$row = apply_filters( 'wp_insert_post_data', $row, $arr );
+	unset( $row['meta_input'], $row['tax_input'], $row['context'] );
+	$id = t_add_post( wp_unslash( $row ) );
+	if ( 'terms' !== ( $GLOBALS['t_persist_failure'] ?? '' ) && isset( $arr['tax_input']['casa_categoria'] ) && current_user_can( 'assign_casa_categorias' ) ) {
+		t_set_terms( $id, $arr['tax_input']['casa_categoria'] );
+	}
+	foreach ( $arr['meta_input'] ?? array() as $key => $value ) {
+		if ( 'meta' !== ( $GLOBALS['t_persist_failure'] ?? '' ) ) {
+			update_post_meta( $id, $key, $value );
+		}
+	}
+	do_action( 'save_post', $id, get_post( $id ), (bool) $before );
+	if ( $fire_after_hooks ) {
+		wp_after_insert_post( get_post( $id ), (bool) $before, $before );
+	}
+	return $id;
+}
+function wp_after_insert_post( $post, $update, $before ) {
+	do_action( 'wp_after_insert_post', $post->ID, $post, $update, $before );
+}
+
 // ----- Load the plugin's core ----------------------------------------------------------
 
 $core = dirname( __DIR__ ) . '/inc/core/';
-foreach ( array( 'schema', 'datetime', 'state', 'validation', 'settings', 'capabilities', 'post-type', 'taxonomy', 'meta', 'class-event', 'sync', 'uuid', 'enforcement', 'rest', 'queries', 'visibility' ) as $file ) {
+foreach ( array( 'schema', 'datetime', 'state', 'validation', 'settings', 'capabilities', 'post-type', 'taxonomy', 'meta', 'class-event', 'sync', 'uuid', 'enforcement', 'event-write', 'rest', 'queries', 'visibility' ) as $file ) {
 	require_once $core . $file . '.php';
 }
 
