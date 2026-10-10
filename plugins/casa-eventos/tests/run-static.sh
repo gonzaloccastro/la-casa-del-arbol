@@ -29,4 +29,7 @@ echo "== architecture"
 echo "== panel script"
 node tests/event-panel.test.cjs || status=1
 
+echo "== operational script"
+node --check assets/admin/operational.js || status=1
+node tests/operational.test.cjs || status=1
 exit $status

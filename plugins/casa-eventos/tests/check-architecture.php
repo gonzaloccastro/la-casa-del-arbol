@@ -208,6 +208,23 @@ if ( is_dir( $theme ) ) {
 	}
 }
 
+
+// E3.2 admin transport must not introduce a parallel Event writer or stored locks.
+foreach ( array( 'inc/admin/operational.php', 'inc/admin/event-form.php' ) as $relative ) {
+	$path = $plugin . '/' . $relative;
+	++$checks;
+	if ( ! file_exists( $path ) ) { $errors[] = $relative . ': missing operational UI'; continue; }
+	$code = code_only( $path );
+	if ( preg_match( '/\b(?:wp_insert_post|wp_update_post|wp_delete_post|wp_trash_post|wp_set_object_terms|set_post_thumbnail|delete_post_thumbnail|wp_restore_post_revision|update_option|set_transient|update_user_meta)\s*\(/', $code ) ) {
+		$errors[] = $relative . ': parallel persistence or stored operational state';
+	}
+}
+++$checks;
+$operational = code_only( $plugin . '/inc/admin/operational.php' );
+if ( 1 !== substr_count( $operational, 'Core\\save_event(' ) ) {
+	$errors[] = 'operational transport must have one Event adapter write boundary';
+}
+
 foreach ( $errors as $error ) {
 	fwrite( STDERR, "FAIL  {$error}\n" );
 }
