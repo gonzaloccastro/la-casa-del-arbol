@@ -47,8 +47,12 @@ require_once CASA_EVENTOS_DIR . 'inc/core/visibility.php';
 // bar is also shown on the public site. Presentation only.
 require_once CASA_EVENTOS_DIR . 'inc/admin/navigation.php';
 
+// Operational guards must run on REST requests outside wp-admin too.
+require_once CASA_EVENTOS_DIR . 'inc/admin/operational.php';
+
 // Admin UI: consumes the core API only.
 if ( is_admin() ) {
+	require_once CASA_EVENTOS_DIR . 'inc/admin/event-form.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/editor.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/list-table.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/categories.php';

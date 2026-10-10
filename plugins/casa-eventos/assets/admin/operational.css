@@ -1,0 +1,11 @@
+/* Styles are scoped to the E3.2 operational page. */
+.casa-operational { max-width: 900px; }
+.casa-operational form, .casa-operational section { margin: 1.5rem 0; }
+.casa-operational-field { margin: 1rem 0; }
+.casa-operational-field > label { display: block; font-weight: 600; margin-bottom: .4rem; }
+.casa-operational-field input:not([type="checkbox"]), .casa-operational-field select, .casa-operational-field textarea { width: 100%; max-width: 42rem; }
+.casa-operational [data-poster-preview] img { max-width: 160px; height: auto; margin-bottom: .5rem; }
+.casa-operational-action { display: inline-block; margin-right: .5rem !important; }
+.casa-operational-buttons { display: flex; flex-wrap: wrap; gap: .5rem; }
+.casa-operational .notice ul { list-style: disc; margin-left: 1.5rem; }
+.casa-operational [hidden] { display: none; }

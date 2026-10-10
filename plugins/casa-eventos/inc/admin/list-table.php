@@ -306,3 +306,25 @@ function enqueue_admin_styles( $hook ) {
 	wp_enqueue_style( 'casa-eventos-admin', CASA_EVENTOS_URL . 'assets/admin/admin.css', array(), CASA_EVENTOS_VERSION );
 }
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\enqueue_admin_styles' );
+
+/** E3.2 keeps the native list but removes native Programador writers. */
+function operational_edit_link( $link, $post_id, $context ) {
+	if ( Core\is_programador() && Core\POST_TYPE === get_post_type( $post_id ) && current_user_can( 'edit_post', $post_id ) ) {
+		return operational_url( (int) $post_id );
+	}
+	return $link;
+}
+add_filter( 'get_edit_post_link', __NAMESPACE__ . '\\operational_edit_link', 10, 3 );
+
+function operational_row_actions( $actions, $post ) {
+	if ( Core\is_programador() && Core\POST_TYPE === $post->post_type ) {
+		unset( $actions['inline hide-if-no-js'], $actions['trash'], $actions['delete'] );
+	}
+	return $actions;
+}
+add_filter( 'post_row_actions', __NAMESPACE__ . '\\operational_row_actions', 10, 2 );
+
+function operational_bulk_actions( $actions ) {
+	return Core\is_programador() ? array() : $actions;
+}
+add_filter( 'bulk_actions-edit-' . Core\POST_TYPE, __NAMESPACE__ . '\\operational_bulk_actions' );

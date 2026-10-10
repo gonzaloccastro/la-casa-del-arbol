@@ -72,7 +72,7 @@ function __( $text ) {
 	return $text;
 }
 function esc_html__( $text ) {
-	return $text;
+	return htmlspecialchars( (string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 }
 function sanitize_text_field( $str ) {
 	$str = strip_tags( (string) $str );
@@ -135,7 +135,7 @@ function wp_doing_cron() {
 	return false;
 }
 function esc_html( $text ) {
-	return $text;
+	return htmlspecialchars( (string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 }
 function wp_die( $message ) {
 	throw new RuntimeException( (string) $message );
@@ -165,6 +165,10 @@ class WP_Post {
 	public $post_title   = '';
 	public $post_excerpt = '';
 	public $post_content = '';
+	public $post_modified = '';
+	public $post_modified_gmt = '';
+	public $post_parent = 0;
+	public $post_name = '';
 	public $post_date = '';
 	public $post_date_gmt = '';
 	public $post_mime_type = '';
@@ -209,9 +213,15 @@ function is_wp_error( $thing ) {
 }
 class WP_REST_Request {
 	private $params;
-	public function __construct( array $params ) {
+	private $method;
+	private $route;
+	public function __construct( array $params, $method = 'GET', $route = '' ) {
 		$this->params = $params;
+		$this->method = $method;
+		$this->route = $route;
 	}
+	public function get_method() { return $this->method; }
+	public function get_route() { return $this->route; }
 	public function get_param( $key ) {
 		return $this->params[ $key ] ?? null;
 	}
@@ -700,4 +710,29 @@ function t_ok( $condition, $message ) {
 }
 function t_eq( $expected, $actual, $message ) {
 	t_ok( $expected === $actual, $message . ' (expected ' . var_export( $expected, true ) . ', got ' . var_export( $actual, true ) . ')' );
+}
+
+/** E3.2 transport/rendering stand-ins. No WordPress routing or browser emulation. */
+function get_current_user_id() { return wp_get_current_user()->ID; }
+function wp_get_session_token() { return $GLOBALS['t_session'] ?? 'static-test-session'; }
+function wp_salt( $scheme = '' ) { return 'test-salt-only'; }
+function wp_json_encode( $value ) { return json_encode( $value ); }
+function wp_create_nonce( $action ) { return hash_hmac( 'sha256', $action, wp_salt() . get_current_user_id() . wp_get_session_token() ); }
+function wp_verify_nonce( $nonce, $action ) { return is_string( $nonce ) && hash_equals( wp_create_nonce( $action ), $nonce ); }
+function esc_attr( $value ) { return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ); }
+function esc_textarea( $value ) { return esc_attr( $value ); }
+function esc_url( $value ) { return esc_attr( $value ); }
+function add_query_arg( $key, $value = null, $url = null ) {
+	if ( is_array( $key ) ) { $args = $key; $url = $value; } else { $args = array( $key => $value ); }
+	return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $args );
+}
+function wp_editor( $content, $id, $settings ) {
+	echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( $settings['textarea_name'] ) . '">' . esc_textarea( $content ) . '</textarea>';
+}
+function wp_safe_redirect( $url, $status = 302 ) { $GLOBALS['t_redirect'] = array( $url, $status ); return true; }
+
+/** Registered CPT context only; not native REST dispatch emulation. */
+function get_post_type_object( $name ) {
+	$args = $GLOBALS['t_registered']['post_type'][ $name ] ?? null;
+	return $args ? (object) ( array( 'name' => $name ) + $args ) : null;
 }
