@@ -424,7 +424,7 @@ grep -m1 Version casa-eventos/casa-eventos.php                               # t
 
 ## E2 release checklist (theme 0.7.0 + casa-eventos 0.2.0)
 
-Nothing here has been run against production yet. E2 makes Home, Agenda and Event pages dynamic, so the release is a plugin **and** a theme change. The plugin ships with `deploy-plugin.ps1` (above), the theme with `deploy-theme.ps1`; each step that touches the server is a separately approved D1 step.
+This checklist was written before D1 and is a procedure, not an execution record. [Project status](project-status.md) records D1 COMPLETE as a reported closure with a historical baseline dated 2026-10-02 (plugin 0.2.0, theme 0.7.0, commit `ba82aa3`). The repository inspection on 2026-10-12 did not establish current production files, activation or completion of the individual checks below. E3.2 is accepted and locally integrated at `ed98b97e529547912851f88afc5762b037c79853`; no E3.2 deployment is established. E2 makes Home, Agenda and Event pages dynamic, so the release is a plugin **and** a theme change. The plugin ships with `deploy-plugin.ps1` (above), the theme with `deploy-theme.ps1`; each step that touches the server is a separately approved D1 step.
 
 1. **Backup:** database and `wp-content/` (plugins, uploads) on the host, in addition to the backups the scripts make.
 2. **Order:** plugin files, plugin activation, then the theme, then the demo-pattern cleanup. Either file order is safe (every theme call to the plugin is guarded, and without the plugin the event sections are simply left out), but plugin-first means the new theme renders real events as soon as it lands.

@@ -1,9 +1,9 @@
 # casa-eventos contract (Event Core, E1)
 
-**Status:** v1.4, milestones E1 + E1.1 (roles and capabilities) + E2 (frontend integration: E2.1 public CTA decision, related rule, unlisted visibility; E2.2 Agenda query facades; E2.3 Home; E2.4 final review), **E2 complete** (2026-09-29). Plugin `casa-eventos` 0.2.0 with theme 0.7.0 (WordPress 7.1.2). Ticketing, WooCommerce, Payway and the custom Programador UI are not started. Source: `plugins/casa-eventos/`.
+**Status:** v1.5 (2026-10-12), milestones E1 + E1.1 + E2 complete; E3.1 implemented locally and **E3.2 accepted / locally integrated** (see §16). Plugin `casa-eventos` remains 0.2.0 with theme 0.7.0. WordPress 7.1.2 is a historical E2 environment reference, not a current runtime verification. Ticketing, WooCommerce and Payway implementation are not started. Source: `plugins/casa-eventos/`; roadmap: [project status](../project-status.md).
 **Inputs:** `ticketing-v1-contract.md` (functional contract), `content-ownership.md`, `event-markup-contract.md`, `home-contract.md`, `agenda-contract.md`, `single-event-contract.md`, the design-only architecture proposal (local report 16), the product decisions closed for E1 on 2026-09-27 those closed for E1.1 on 2026-09-28 (paused events, categories, the Programador role), and the E2 frontend decisions closed on 2026-09-28 (§15).
 
-This document records **approved** decisions only. Proposals that are still open are listed as open in the last section. Where it says "E2" or "commerce", the item is intentionally not implemented in E1.
+This document records **approved** decisions only. Proposals that are still open are listed in §13. Where it says "E2" or "commerce", the item is intentionally not implemented in E1.
 
 ## 1. Boundaries
 
@@ -207,7 +207,6 @@ These supersede the "current/upcoming only" wording in `content-ownership.md` an
 ## 13. Still open (not approved)
 
 - In tickets mode (commerce phase), whether the entry text is derived from ticket prices.
-- Plugin deployment workflow (the deploy script is theme-only).
 - Commerce decisions: Woo hold mechanism, XLSX writer, Payway gateway, commerce capabilities (orders, buyer lists, exports).
 - Programador access to synced patterns and user global styles in the editor (core gates both on the generic `edit_posts`; see §14).
 
@@ -277,7 +276,7 @@ Receives every Event and category capability in addition to its core capabilitie
 - **Deactivation** removes the Programador **role definition** and the version option. Its users keep their role assignment but have no access (not even uploads) while the plugin is inactive. Reactivation restores access automatically. Administrator capabilities stay (inert).
 - **Uninstall** removes the Programador role and every plugin capability from every role, plus the version option. **No event, meta, category, setting or user is deleted.**
 
-### Interim editor UX and future direction (decided, not implemented)
+### Interim editor UX and future direction (historical E1.1 decision; implemented locally in E3.2, §16)
 
 - The current Gutenberg editor with its document-sidebar panels is an **administrative/development interface, not the final operational UX** for the Programador. During E1.1 it remains accessible to the Programador as an interim interface.
 - A later phase will build a **simple, visual, server-rendered Event management interface owned by `casa-eventos`**, with a focused flow: Eventos → event list · **+ Cargar evento** · edit event.
@@ -362,3 +361,16 @@ When "Venta de entradas" is selected, the "Datos del evento" panel shows an info
 | N11 | Active `tickets` before commerce: no purchase control, the note "Entradas a la venta próximamente"; editor hint for tickets mode. | E2.1 (live) |
 | N12 | Home section eyebrow: "Próximas fechas". | E2.3 (live in the pattern; H2 "Eventos destacados". Home pages built before E2.3: one-time manual edit, decision S1, `home-contract.md`) |
 | N13 | Listed: indexable, in the sitemap and search. Unlisted: reachable, noindex, out of the sitemap and search. | E2.1 (live, plugin) |
+
+## 16. Operational Event management (E3.1 / E3.2)
+
+E3.2 acceptance was reported by the user; local integration was verified on 2026-10-12 at `main`, commit `ed98b97e529547912851f88afc5762b037c79853`. E3.1 is the Event write adapter (`inc/core/event-write.php`); E3.2 adds the server-rendered operational form, list links, JavaScript and native write-path guards (`inc/admin/operational.php`, `event-form.php`). This records local implementation and acceptance, **not deployment** or current runtime QA.
+
+The plugin deployment workflow is implemented by `deploy-plugin.ps1`; execution and activation evidence remain environment-specific (see [deployment](../deployment.md)).
+
+- The form consumes the edit snapshot/write API; core retains validation, derivation and authorization. Programador native editing paths are redirected or denied; administrators retain native editing and revisions.
+- Editorial saves and lifecycle actions are separate. Lifecycle actions operate on saved data; cancellation, return to draft and reactivation require confirmation. Reactivation remains administrator-only. No new generic or commerce capability is granted.
+- Preserved limitations: block-marked descriptions are protected from simple-editor conversion and require an administrator for editing; the form does not introduce a scheduling UI and preserves existing future/private/pending publication states; poster selection requires JavaScript.
+- Stale-state and nonce checks are guards, not a transactional write guarantee. Partial persistence failures are reported as errors and require inspecting saved data before retrying; they never confirm success.
+- Own ticket sales remain unavailable. No ticket types, Woo products, orders, payment integration, transactional capacity enforcement, buyer export or emails are supplied by E3.2. The existing plugin version remains 0.2.0 and is insufficient to identify this release without its commit.
+- Operational tests and architecture checks exist in the checkout. This documentation task did not rerun implementation tests or revive the old bootstrap harness; it makes no new claim of runtime validation.
