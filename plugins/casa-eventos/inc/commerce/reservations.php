@@ -4,7 +4,7 @@ namespace CasaEventos\Commerce;
 use CasaEventos\Core;
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-const RESERVATION_SCHEMA = 2;
+const RESERVATION_SCHEMA = 3;
 const RESERVATION_SCHEMA_OPTION = 'lcda_reservation_schema';
 
 function reservation_table() {
@@ -22,6 +22,7 @@ function install_reservations() {
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		event_id bigint(20) unsigned NOT NULL,
 		request_hash char(64) NOT NULL,
+		session_hash char(64) NOT NULL DEFAULT '',
 		payload_hash char(64) NOT NULL,
 		quantities longtext NOT NULL,
 		snapshot longtext NOT NULL,
@@ -41,7 +42,7 @@ function install_reservations() {
 	$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
 	if ( $exists !== $table ) { return false; }
 	$columns = $wpdb->get_col( 'SHOW COLUMNS FROM ' . $table );
-	$required = array( 'id', 'event_id', 'request_hash', 'payload_hash', 'quantities', 'snapshot', 'status', 'created_at', 'expires_at', 'attempt_hash', 'order_id', 'payment_hash', 'refund_hash' );
+	$required = array( 'id', 'event_id', 'request_hash', 'session_hash', 'payload_hash', 'quantities', 'snapshot', 'status', 'created_at', 'expires_at', 'attempt_hash', 'order_id', 'payment_hash', 'refund_hash' );
 	if ( ! is_array( $columns ) || array_diff( $required, $columns ) ) { return false; }
 	$index = $wpdb->get_results( "SHOW INDEX FROM $table WHERE Key_name = 'event_request'" );
 	if ( ! is_array( $index ) || count( $index ) !== 2 || (int) $index[0]->Non_unique !== 0
@@ -92,10 +93,10 @@ function reservation_held( $rows, $now ) {
 	if ( ! is_array( $rows ) ) { return error( 'ledger', 'No se puede verificar la ocupación.' ); }
 	foreach ( $rows as $row ) {
 		$status = (string) $row->status;
-		if ( ! in_array( $status, array( 'checkout_active', 'expired', 'payment_pending', 'submitting', 'paid', 'refunded', 'failed', 'cancelled' ), true ) ) {
+		if ( ! in_array( $status, array( 'checkout_active', 'order_creating', 'expired', 'payment_pending', 'submitting', 'paid', 'refunded', 'failed', 'cancelled' ), true ) ) {
 			return error( 'ledger', 'La ocupación requiere conciliación.' );
 		}
-		$held = in_array( $status, array( 'submitting', 'payment_pending', 'paid' ), true )
+		$held = in_array( $status, array( 'order_creating', 'submitting', 'payment_pending', 'paid' ), true )
 			|| ( 'checkout_active' === $status && (int) $row->expires_at > $now );
 		if ( ! $held ) { continue; }
 		$lines = json_decode( (string) $row->quantities, true );
@@ -159,13 +160,16 @@ function refresh_locked_reads( $event_id ) {
  * Internal admission only. An event lock shared with T1 serializes fresh reads
  * and the single SQL insert. A lost response is recovered by request key.
  */
-function reserve( $event_id, $lines, $request_key, $now = null ) {
+function reserve( $event_id, $lines, $request_key, $now = null, $session_hash = '' ) {
 	global $wpdb;
 	$event_id = integer_value( $event_id, 1 );
 	$normalized = reservation_lines( $lines );
 	if ( null === $event_id || is_wp_error( $normalized ) ) { return is_wp_error( $normalized ) ? $normalized : error( 'request', 'El evento no es válido.' ); }
 	if ( ! is_string( $request_key ) || ! preg_match( '/^[a-f0-9]{8}-[a-f0-9-]{27,40}$/D', $request_key ) ) {
 		return error( 'request', 'La clave de reserva no es válida.' );
+	}
+	if ( ! is_string( $session_hash ) || ( '' !== $session_hash && ! preg_match( '/^[a-f0-9]{64}$/D', $session_hash ) ) ) {
+		return error( 'request', 'La sesion de compra no es valida.' );
 	}
 	if ( ! available() || (int) get_option( RESERVATION_SCHEMA_OPTION, 0 ) !== RESERVATION_SCHEMA ) {
 		return error( 'unavailable', 'La coordinación de reservas no está disponible.' );
@@ -181,6 +185,7 @@ function reserve( $event_id, $lines, $request_key, $now = null ) {
 		$old = reservation_row( $event_id, $request_hash );
 		if ( is_wp_error( $old ) ) { return $old; }
 		if ( $old ) {
+			if ( ! hash_equals( (string) $old->session_hash, $session_hash ) ) { return error( 'owner', 'La reserva pertenece a otra sesion.' ); }
 			return hash_equals( (string) $old->payload_hash, $payload_hash )
 				? reservation_result( $old, $now, true )
 				: error( 'conflict', 'La clave de reserva ya se usó con otra selección.' );
@@ -220,14 +225,18 @@ function reserve( $event_id, $lines, $request_key, $now = null ) {
 				if ( ! $cutoff_time || $cutoff_time->getTimestamp() <= $now ) { return error( 'closed', 'Cerró la venta de un tipo.' ); }
 			}
 			$snapshot[ $type_id ] = array( 'quantity' => $quantity, 'uuid' => (string) $type->get_meta( '_lcda_ticket_uuid' ),
+				'name' => (string) $type->get_meta( '_lcda_ticket_name' ),
 				'price' => (string) $type->get_regular_price( 'edit' ), 'currency' => (string) $type->get_meta( '_lcda_ticket_currency' ) );
 		}
+		$snapshot['_event'] = array( 'uuid' => $event->uuid(), 'title' => $event->title(), 'start_local' => $event->start_local(),
+			'start_gmt' => $event->start_gmt(), 'timezone' => $event->timezone(),
+			'venue' => $event->venue_name(), 'venue_address' => $event->venue_address() );
 		// The current WP/Woo pricing context may not yet have an approved tax policy.
 		// Snapshots remain internal and cannot be offered as a final buyer total.
 		$inserted = $wpdb->query( $wpdb->prepare(
-			'INSERT INTO ' . reservation_table() . ' (event_id,request_hash,payload_hash,quantities,snapshot,status,created_at,expires_at,attempt_hash) '
-			. 'SELECT %d,%s,%s,%s,%s,%s,%d,%d,%s WHERE IS_USED_LOCK(%s) = CONNECTION_ID()',
-			$event_id, $request_hash, $payload_hash, wp_json_encode( $normalized ), wp_json_encode( $snapshot ),
+			'INSERT INTO ' . reservation_table() . ' (event_id,request_hash,session_hash,payload_hash,quantities,snapshot,status,created_at,expires_at,attempt_hash) '
+			. 'SELECT %d,%s,%s,%s,%s,%s,%s,%d,%d,%s WHERE IS_USED_LOCK(%s) = CONNECTION_ID()',
+			$event_id, $request_hash, $session_hash, $payload_hash, wp_json_encode( $normalized ), wp_json_encode( $snapshot ),
 			'checkout_active', $now, $now + 1200, '', lock_name( $event_id )
 		) );
 		if ( 1 !== $inserted ) {
@@ -311,6 +320,33 @@ function retain_unknown_payment( $event_id, $reservation_id, $request_key, $atte
 	}
 }
 
+/** Durable fence before any Woo order write; retries must reconcile first. */
+function claim_order_creation( $event_id, $reservation_id, $request_key, $session_hash, $now = null ) {
+	$event_id = integer_value( $event_id, 1 );
+	$reservation_id = integer_value( $reservation_id, 1 );
+	$now = null === $now ? time() : integer_value( $now, 0 );
+	if ( null === $event_id || null === $reservation_id || null === $now
+		|| ! is_string( $session_hash ) || ! preg_match( '/^[a-f0-9]{64}$/D', $session_hash ) ) {
+		return error( 'request', 'La solicitud de pedido es invalida.' );
+	}
+	$owned_before = ! empty( $GLOBALS['lcda_config_locks'][ $event_id ] );
+	$lock = acquire( $event_id );
+	if ( is_wp_error( $lock ) ) { return $lock; }
+	try {
+		$row = reservation_owner_row( $event_id, $reservation_id, $request_key );
+		if ( is_wp_error( $row ) ) { return $row; }
+		if ( ! hash_equals( (string) $row->session_hash, $session_hash ) ) { return error( 'owner', 'La sesion no corresponde a la reserva.' ); }
+		if ( 'order_creating' === $row->status ) { return reservation_result( $row, $now, true ); }
+		if ( $row->order_id ) { return error( 'conflict', 'La reserva ya tiene pedido.' ); }
+		if ( 'checkout_active' !== $row->status || (int) $row->expires_at <= $now ) { return error( 'expired', 'El checkout vencio.' ); }
+		$updated = reservation_update( $event_id, $reservation_id, 'checkout_active', 'order_creating' );
+		if ( 1 !== $updated ) { return error( 'uncertain', 'La creacion del pedido requiere conciliacion.' ); }
+		$row->status = 'order_creating';
+		return reservation_result( $row, $now, false );
+	} catch ( \Throwable $exception ) { return error( 'uncertain', 'La creacion del pedido requiere conciliacion.' ); }
+	finally { if ( ! $owned_before ) { release( $event_id ); } }
+}
+
 /** Bind one Woo order reference without creating or mutating an order. */
 function bind_reservation_order( $event_id, $reservation_id, $request_key, $order_id ) {
 	global $wpdb;
@@ -325,13 +361,14 @@ function bind_reservation_order( $event_id, $reservation_id, $request_key, $orde
 		$row = reservation_owner_row( $event_id, $reservation_id, $request_key );
 		if ( is_wp_error( $row ) ) { return $row; }
 		if ( (int) $row->order_id === $order_id ) { return reservation_result( $row, time(), true ); }
-		if ( $row->order_id || 'checkout_active' !== $row->status ) { return error( 'conflict', 'La reserva ya tiene otro pedido o estado.' ); }
+		if ( $row->order_id || ! in_array( $row->status, array( 'checkout_active', 'order_creating' ), true ) ) { return error( 'conflict', 'La reserva ya tiene otro pedido o estado.' ); }
 		$updated = $wpdb->query( $wpdb->prepare(
-			'UPDATE ' . reservation_table() . ' SET order_id = %d WHERE event_id = %d AND id = %d AND order_id IS NULL AND status = %s AND IS_USED_LOCK(%s) = CONNECTION_ID()',
-			$order_id, $event_id, $reservation_id, 'checkout_active', lock_name( $event_id )
+			'UPDATE ' . reservation_table() . ' SET order_id = %d, status = %s WHERE event_id = %d AND id = %d AND order_id IS NULL AND status = %s AND IS_USED_LOCK(%s) = CONNECTION_ID()',
+			$order_id, 'checkout_active', $event_id, $reservation_id, $row->status, lock_name( $event_id )
 		) );
 		if ( 1 !== $updated ) { return error( 'uncertain', 'El vinculo del pedido requiere conciliacion.' ); }
 		$row->order_id = $order_id;
+		$row->status = 'checkout_active';
 		return reservation_result( $row, time(), false );
 	} catch ( \Throwable $exception ) { return error( 'uncertain', 'El vinculo requiere conciliacion.' ); }
 	finally { if ( ! $owned_before ) { release( $event_id ); } }

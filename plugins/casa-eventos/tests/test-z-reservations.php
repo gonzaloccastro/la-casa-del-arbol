@@ -62,13 +62,13 @@ class T2_Db {
 	public function query( $sql ) {
 		if ( $this->busy ) { return 0; }
 		if ( str_starts_with( $sql, 'INSERT INTO ' ) ) {
-			if ( ! preg_match( "/SELECT ([0-9]+),'([a-f0-9]+)','([a-f0-9]+)','([^']+)','([^']+)','checkout_active',([0-9]+),([0-9]+),'' WHERE/", $sql, $m ) ) { return false; }
-			$result = $this->insert( '', array( 'event_id' => (int) $m[1], 'request_hash' => $m[2], 'payload_hash' => $m[3],
-				'quantities' => $m[4], 'snapshot' => $m[5], 'status' => 'checkout_active', 'created_at' => (int) $m[6],
-				'expires_at' => (int) $m[7], 'attempt_hash' => '', 'order_id' => null, 'payment_hash' => '', 'refund_hash' => '' ), array() );
+			if ( ! preg_match( "/SELECT ([0-9]+),'([a-f0-9]+)','([a-f0-9]*)','([a-f0-9]+)','([^']+)','([^']+)','checkout_active',([0-9]+),([0-9]+),'' WHERE/", $sql, $m ) ) { return false; }
+			$result = $this->insert( '', array( 'event_id' => (int) $m[1], 'request_hash' => $m[2], 'session_hash' => $m[3], 'payload_hash' => $m[4],
+				'quantities' => $m[5], 'snapshot' => $m[6], 'status' => 'checkout_active', 'created_at' => (int) $m[7],
+				'expires_at' => (int) $m[8], 'attempt_hash' => '', 'order_id' => null, 'payment_hash' => '', 'refund_hash' => '' ), array() );
 			return $result;
 		}
-		if ( preg_match( "/SET order_id = ([0-9]+) WHERE event_id = ([0-9]+) AND id = ([0-9]+)/", $sql, $m ) ) {
+		if ( preg_match( "/SET order_id = ([0-9]+), status = 'checkout_active' WHERE event_id = ([0-9]+) AND id = ([0-9]+)/", $sql, $m ) ) {
 			foreach ( $this->rows as $row ) {
 				if ( (int) $row->event_id === (int) $m[2] && (int) $row->id === (int) $m[3] && null === $row->order_id ) {
 					$row->order_id = (int) $m[1]; return 1;

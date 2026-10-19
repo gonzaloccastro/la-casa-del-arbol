@@ -106,12 +106,52 @@ function has_ticket_order( $parent ) {
 	return false;
 }
 
+/** Only our linked pending orders may coexist with fresh T2 admissions. */
+function ticket_orders_reconciled( $parent ) {
+	$event_id = (int) $parent->get_meta( '_lcda_ticket_event' );
+	$parent_id = $parent->get_id();
+	$type_ids = array_map( static fn( $type ) => $type->get_id(), variations( $parent ) );
+	$page = 1;
+	try {
+		do {
+			$results = wc_get_orders( array( 'limit' => 50, 'paged' => $page, 'paginate' => true, 'return' => 'objects',
+				'status' => array_merge( array_keys( wc_get_order_statuses() ), array( 'trash' ) ) ) );
+			if ( ! is_object( $results ) || ! isset( $results->orders, $results->max_num_pages ) || ! is_array( $results->orders ) ) { return false; }
+			foreach ( $results->orders as $order ) {
+				if ( ! is_object( $order ) || ! method_exists( $order, 'get_items' ) ) { return false; }
+				$found = false;
+				$lines = array();
+				foreach ( $order->get_items( 'line_item' ) as $item ) {
+					if ( ! is_object( $item ) || ! method_exists( $item, 'get_product_id' ) || ! method_exists( $item, 'get_variation_id' ) ) { return false; }
+					if ( (int) $item->get_product_id() === $parent_id || in_array( (int) $item->get_variation_id(), $type_ids, true ) ) { $found = true; }
+					$lines[ (int) $item->get_variation_id() ] = (int) $item->get_quantity();
+				}
+				if ( ! $found ) { continue; }
+				if ( count( $lines ) !== count( $order->get_items( 'line_item' ) ) ) { return false; }
+				if ( 'pending' !== $order->get_status() || 'lcda-ticket' !== $order->get_created_via()
+					|| (int) $order->get_meta( '_lcda_ticket_event_id' ) !== $event_id
+					|| ! $order->get_data_store() || $order->get_data_store()->get_stock_reduced( $order->get_id() ) ) { return false; }
+				$row = reservation_by_id( $event_id, (int) $order->get_meta( '_lcda_ticket_reservation_id' ) );
+				if ( is_wp_error( $row ) || ! $row || ! in_array( $row->status, array( 'checkout_active', 'payment_pending', 'submitting' ), true ) || (int) $row->order_id !== $order->get_id()
+					|| ! hash_equals( (string) $row->request_hash, (string) $order->get_meta( '_lcda_ticket_request_hash' ) ) ) { return false; }
+				$expected = json_decode( (string) $row->quantities, true );
+				if ( ! is_array( $expected ) || count( $lines ) !== count( $expected ) ) { return false; }
+				foreach ( $expected as $type_id => $quantity ) {
+					if ( ! in_array( (int) $type_id, $type_ids, true ) || ( $lines[ (int) $type_id ] ?? null ) !== (int) $quantity ) { return false; }
+				}
+			}
+			++$page;
+		} while ( $page <= (int) $results->max_num_pages );
+	} catch ( \Throwable $exception ) { return false; }
+	return true;
+}
+
 /** Deliberately conservative about this Event's commercial history, not unrelated orders. */
 function zero_consumption( $parent, $ignore_reservations = false ) {
 	if ( ! $ignore_reservations && (int) get_option( RESERVATION_SCHEMA_OPTION, 0 ) === RESERVATION_SCHEMA
 		&& reservation_history( (int) $parent->get_meta( '_lcda_ticket_event' ) ) ) { return false; }
 	if ( ! available() || ! hash_equals( hash_hmac( 'sha256', (string) $parent->get_id(), wp_salt( 'auth' ) ), (string) $parent->get_meta( '_lcda_ticket_origin' ) ) ) { return false; }
-	if ( has_ticket_order( $parent ) ) { return false; }
+	if ( $ignore_reservations ? ! ticket_orders_reconciled( $parent ) : has_ticket_order( $parent ) ) { return false; }
 	foreach ( variations( $parent ) as $type ) {
 		$proof = (string) $type->get_meta( '_lcda_ticket_stock_proof' );
 		if ( ! $proof || ! hash_equals( stock_proof( $type, (int) $parent->get_meta( '_lcda_ticket_event' ) ), $proof )
