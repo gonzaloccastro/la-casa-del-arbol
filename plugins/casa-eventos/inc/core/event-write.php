@@ -163,6 +163,8 @@ function save_event( $post_id, array $fields, $publication_action = null ) {
 	if ( is_wp_error( $post ) ) {
 		return $post;
 	}
+	$guard = apply_filters( 'casa_eventos/before_event_write', true, $post_id, $fields );
+	if ( is_wp_error( $guard ) ) { return $guard; }
 	if ( ! $post && ! current_user_can( event_capabilities()['create_posts'] ) ) {
 		return event_write_error( 'forbidden', __( 'No tenés permiso para crear eventos.', 'casa-eventos' ) );
 	}

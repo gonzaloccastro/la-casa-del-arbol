@@ -120,12 +120,12 @@ t_ok( $role instanceof WP_Role, 'role casa_programador created' );
 t_eq( 'Programador', $GLOBALS['t_role_names']['casa_programador'] ?? null, 'display name Programador' );
 $programador = array_keys( array_filter( $role->capabilities ) );
 sort( $programador );
-$expected = array( 'assign_casa_categorias', 'edit_casa_eventos', 'edit_others_casa_eventos', 'edit_private_casa_eventos', 'edit_published_casa_eventos', 'publish_casa_eventos', 'read', 'read_private_casa_eventos', 'upload_files' );
+$expected = array( 'assign_casa_categorias', 'edit_casa_eventos', 'edit_casa_ticket_capacities', 'edit_casa_ticket_prices', 'edit_others_casa_eventos', 'edit_private_casa_eventos', 'edit_published_casa_eventos', 'manage_casa_ticket_types', 'publish_casa_eventos', 'read', 'read_private_casa_eventos', 'upload_files' );
 t_eq( $expected, $programador, 'exact Programador capability list' );
 $admin_caps = array_keys( array_filter( get_role( 'administrator' )->capabilities ) );
 t_eq( array(), array_values( array_diff( Core\plugin_capabilities(), $admin_caps ) ), 'administrator has every Event and category capability' );
 t_eq( array(), array_values( array_diff( $core_admin, $admin_caps ) ), 'administrator keeps every core capability' );
-t_eq( 14, count( Core\plugin_capabilities() ), '14 plugin capabilities (10 Event + 4 category)' );
+t_eq( 17, count( Core\plugin_capabilities() ), '17 plugin capabilities (10 Event + 4 category + 3 commercial)' );
 t_eq( array( 'read', 'edit_posts', 'edit_pages', 'manage_categories' ), array_keys( get_role( 'editor' )->capabilities ), 'editor role untouched (no Event capabilities)' );
 t_eq( Core\CAPS_VERSION, get_option( Core\CAPS_VERSION_OPTION ), 'capability version recorded' );
 
@@ -221,7 +221,7 @@ foreach ( array( 'edit_pages', 'publish_pages' ) as $c ) {
 t_ok( ! t_can( $P, 'edit_post', array( 'type' => $page_type, 'post' => array( 1, 'publish' ) ) ), 'Pages: cannot edit a page' );
 $forbidden = array( 'manage_options', 'manage_categories', 'list_users', 'edit_users', 'create_users', 'promote_users', 'activate_plugins', 'install_plugins', 'edit_plugins', 'switch_themes', 'edit_theme_options', 'customize', 'moderate_comments', 'import', 'export', 'unfiltered_html', 'manage_woocommerce', 'edit_products', 'view_woocommerce_reports', 'delete_casa_eventos', 'delete_others_casa_eventos', 'delete_published_casa_eventos', 'delete_private_casa_eventos', 'manage_casa_categorias', 'edit_casa_categorias', 'delete_casa_categorias' );
 t_eq( array(), array_values( array_intersect( $forbidden, $P ) ), 'none of the forbidden capabilities (settings, users, plugins, themes, Woo, deletes, category admin)' );
-t_eq( array(), array_values( array_diff( $P, array_merge( array( 'read', 'upload_files' ), array_values( $event_type ), array_values( $tax ) ) ) ), 'nothing beyond read, upload_files and plugin capabilities' );
+t_eq( array(), array_values( array_diff( $P, array_merge( array( 'read', 'upload_files' ), Core\plugin_capabilities() ) ) ), 'nothing beyond read, upload_files and plugin capabilities' );
 
 t_group( 'matrix/Administrator' );
 foreach ( array( 'edit_posts', 'create_posts', 'publish_posts', 'read_private_posts' ) as $c ) {

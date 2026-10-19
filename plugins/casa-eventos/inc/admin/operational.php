@@ -19,6 +19,16 @@ function operational_url( $id = 0 ) {
 	return add_query_arg( array( 'page' => OPERATIONAL_PAGE, 'event_id' => $id ), admin_url( 'edit.php?post_type=' . Core\POST_TYPE ) );
 }
 
+/** Send WordPress's Add New link straight to the permitted Programador form. */
+function operational_new_event_url( $url, $path ) {
+	if ( ! Core\is_programador() || ! current_user_can( Core\event_capabilities()['create_posts'] ) ) { return $url; }
+	$parts = parse_url( $path );
+	if ( ! is_array( $parts ) || 'post-new.php' !== basename( $parts['path'] ?? '' ) ) { return $url; }
+	parse_str( $parts['query'] ?? '', $query );
+	return count( $query ) === 1 && ( $query['post_type'] ?? null ) === Core\POST_TYPE ? operational_url() : $url;
+}
+add_filter( 'admin_url', __NAMESPACE__ . '\\operational_new_event_url', 10, 2 );
+
 /** Strict transport parsing, never absint/casting of forged IDs. */
 function operational_id( $raw ) {
 	if ( ! is_string( $raw ) || ! preg_match( '/^(0|[1-9][0-9]*)$/D', $raw ) || strlen( $raw ) > strlen( (string) PHP_INT_MAX ) || ( strlen( $raw ) === strlen( (string) PHP_INT_MAX ) && strcmp( $raw, (string) PHP_INT_MAX ) > 0 ) ) {
@@ -242,6 +252,11 @@ function load_operational_page() {
 		if ( ( $request['event_id'] ?? null ) !== (string) $id ) {
 			wp_die( esc_html__( 'La solicitud no corresponde a este evento.', 'casa-eventos' ), '', array( 'response' => 400 ) );
 		}
+		if ( isset( $request['ticket_intent'] ) ) {
+			$GLOBALS['casa_ticket_result'] = ticket_type_submit( $request, 'POST' );
+			$GLOBALS['casa_eventos_operational_view'] = array( 'snapshot' => $snapshot, 'result' => null, 'request' => $request );
+			return;
+		}
 		$result = operational_submit( $request, 'POST' );
 		$redirect = operational_result_redirect( $result, $id );
 		if ( $redirect ) {
@@ -256,6 +271,7 @@ function operational_page() {
 	$view = $GLOBALS['casa_eventos_operational_view'] ?? null;
 	if ( ! $view ) { return; }
 	render_operational_form( $view['snapshot'], $view['result'], $view['request'] );
+	render_ticket_types( $view['snapshot']['id'], $GLOBALS['casa_ticket_result'] ?? null, $view['request'] );
 }
 
 function enqueue_operational_assets( $hook ) {

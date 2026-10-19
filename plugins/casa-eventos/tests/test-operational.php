@@ -244,6 +244,8 @@ foreach ( $cases as list( $page_name, $method, $request ) ) {
 }
 t_eq( array( 'redirect' => Admin\operational_url( $id ) ), Admin\operational_native_route( 'post.php', 'GET', array( 'post' => (string) $id, 'action' => 'edit' ) ), 'native edit GET redirects' );
 t_eq( array( 'redirect' => Admin\operational_url() ), Admin\operational_native_route( 'post-new.php', 'GET', array( 'post_type' => 'casa_evento' ) ), 'native create GET redirects' );
+t_eq( Admin\operational_url(), Admin\operational_new_event_url( 'http://site.test/wp-admin/post-new.php?post_type=casa_evento', 'post-new.php?post_type=casa_evento' ), 'Programador Add New link targets operational form directly' );
+t_eq( 'http://site.test/wp-admin/post-new.php?post_type=post', Admin\operational_new_event_url( 'http://site.test/wp-admin/post-new.php?post_type=post', 'post-new.php?post_type=post' ), 'other post types retain native URLs' );
 t_eq( null, Admin\operational_native_route( 'edit.php', 'GET', array( 'post_type' => 'casa_evento' ) ), 'native list preserved' );
 t_eq( null, Admin\operational_native_route( 'post.php', 'POST', array( 'post_ID' => (string) $image ) ), 'own attachment path unaffected' );
 t_eq( null, Admin\operational_native_route( 'upload.php', 'GET', array() ), 'media unaffected' );
@@ -252,6 +254,7 @@ t_eq( array( 'edit' => 'Edit' ), Admin\operational_row_actions( array( 'edit' =>
 $GLOBALS['t_caps']['manage_options'] = true;
 $GLOBALS['t_current_user'] = new WP_User( 1, array( 'administrator' ), array( 'manage_options' ) );
 foreach ( $cases as list( $page_name, $method, $request ) ) { t_eq( null, Admin\operational_native_route( $page_name, $method, $request ), 'administrator native path retained' ); }
+t_eq( 'http://site.test/wp-admin/post-new.php?post_type=casa_evento', Admin\operational_new_event_url( 'http://site.test/wp-admin/post-new.php?post_type=casa_evento', 'post-new.php?post_type=casa_evento' ), 'administrator native create URL retained' );
 $GLOBALS['t_caps']['manage_options'] = false;
 $GLOBALS['t_current_user'] = new WP_User( 21, array( 'casa_programador' ), array_keys( array_filter( $GLOBALS['t_caps'] ) ) );
 

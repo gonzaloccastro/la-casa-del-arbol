@@ -37,6 +37,7 @@ function stored_validation_data( WP_Post $post, $target_status, $timestamp = nul
 	$terms  = wp_get_object_terms( $id, TAXONOMY, array( 'fields' => 'ids' ) );
 
 	return array(
+		'event_id'        => $id,
 		'target_status'   => $target_status,
 		'title'           => (string) $post->post_title,
 		'start'           => (string) get_post_meta( $id, META_START, true ),
@@ -57,6 +58,25 @@ function stored_validation_data( WP_Post $post, $target_status, $timestamp = nul
 		'now_gmt'         => now_gmt( $timestamp ),
 	);
 }
+
+/** Neutral, last-line capacity guard: also covers REST, revisions and metadata APIs. */
+function guard_capacity_metadata( $check, $id, $key, $value, $extra = null ) {
+	if ( null !== $check || META_CAPACITY !== $key || POST_TYPE !== get_post_type( $id ) ) { return $check; }
+	$old = get_post_meta( $id, META_CAPACITY, true );
+	if ( (string) $old === (string) $value ) { return $check; }
+	$result = apply_filters( 'casa_eventos/capacity_write_allowed', true, (int) $id, $value, $old );
+	return is_wp_error( $result ) || false === $result ? false : $check;
+}
+add_filter( 'add_post_metadata', __NAMESPACE__ . '\\guard_capacity_metadata', 20, 5 );
+add_filter( 'update_post_metadata', __NAMESPACE__ . '\\guard_capacity_metadata', 20, 5 );
+
+function guard_capacity_delete( $check, $id, $key, $value, $all ) {
+	if ( META_CAPACITY !== $key ) { return $check; }
+	// Bulk deletion cannot validate individual Event capacities.
+	if ( $all ) { return false; }
+	return guard_capacity_metadata( $check, $id, $key, default_capacity() );
+}
+add_filter( 'delete_post_metadata', __NAMESPACE__ . '\\guard_capacity_delete', 20, 5 );
 
 /**
  * Validation data for a new event with nothing stored yet.

@@ -1,12 +1,12 @@
 # Casa Eventos
 
-**Version:** 0.2.0 (milestone E2, frontend integration; E1 Event Core in 0.1.0)
-**Requires:** WordPress 6.6+ (developed against 7.1.2), PHP 8.0+ (tested with 8.2). No other plugins; **WooCommerce is not required**.
+**Version:** 0.3.0 (T1 commercial configuration; NOT ACCEPTED / NOT INTEGRATED)
+**Requires:** WordPress 6.6+ (tested with 7.1.2), PHP 8.0+ (tested with 8.2.29). Event Core works without WooCommerce; T1 commercial configuration requires it. Focused disposable QA used WooCommerce 11.2.0 with HPOS.
 **Contract:** `docs/implementation/casa-eventos-contract.md` in the repository.
 
 Eventos de La Casa del Árbol: la entidad Evento, sus categorías, fechas, estados, visibilidad y consultas. Es la única fuente de verdad de los eventos; Home, Agenda y la página del evento leen de acá (fase E2, completa). El theme `la-casa-del-arbol` sigue siendo solo presentación.
 
-El plugin no imprime markup en el frontend: el theme arma la página del evento, la Agenda y los destacados de la Home con la API pública (`Event`, `Queries`). El plugin sí decide visibilidad (noindex, sitemap y búsqueda de los ocultos). No crea productos de WooCommerce y no vende entradas.
+El plugin no imprime markup en el frontend: el theme arma la página del evento, la Agenda y los destacados de la Home con la API pública (`Event`, `Queries`). El plugin sí decide visibilidad (noindex, sitemap y búsqueda de los ocultos). T1 crea productos internos solo al guardar un tipo de entrada; todas las ventas propias continúan deshabilitadas.
 
 Caché: la Home, la Agenda y la página del evento se calculan en cada visita con el estado real de los eventos. Si producción usa caché de página completa, revisar su duración o excluir esas páginas antes de publicar (ver `docs/deployment.md` en el repositorio).
 
@@ -25,7 +25,22 @@ Caché: la Home, la Agenda y la página del evento se calculan en cada visita co
 - **Programador** (`casa_programador`): la persona que carga y mantiene las fechas. En el menú ve solo **Eventos** (Todos los eventos · Añadir evento) y **Medios**. Al entrar llega a la lista de eventos. La barra superior solo tiene el enlace al sitio público (desde el sitio, "Eventos" vuelve a la lista) y **Salir**. Crea, edita (de cualquier autor), publica, programa, pausa y cancela eventos; elige **una categoría existente**; sube y elige afiches (y edita el texto alternativo de las imágenes que subió). **No** puede borrar eventos, reactivar un evento cancelado, crear/editar/borrar categorías, entrar a Ajustes, ni tocar Entradas, Páginas, usuarios, plugins, temas o ajustes de WordPress.
 - **Administrador**: todo lo anterior más borrar eventos, administrar categorías, Ajustes y reactivar cancelados.
 - Los roles Editor, Autor y Colaborador de WordPress **no** tienen acceso a Eventos.
-- El editor de bloques actual es una interfaz provisoria para el Programador; más adelante habrá una pantalla propia y simple para cargar eventos.
+- E3.2 ya ofrece el formulario operacional del Programador; el administrador conserva el editor nativo como fallback editorial.
+- A9/T1 añade a ambos roles `manage_casa_ticket_types`, `edit_casa_ticket_prices` y `edit_casa_ticket_capacities`, siempre junto al permiso del evento. No añade administración Woo, pedidos, gateway ni refunds. Versión de capabilities 2 mediante el instalador existente.
+
+## T1: configuración comercial local, pendiente de revisión
+
+En la edición operacional E3.2, “Tipos de entrada” permite alta y edición individual: nombre, precio nominal/moneda de la tienda, cupo, activo, corte propio y máximo 1–10. Activo no habilita compra. Aforo permanece en Datos del evento; la suma de tipos puede superarlo. Los formularios comerciales no guardan contenido editorial y avisan sobre cambios pendientes.
+
+`inc/commerce/` es el único módulo que usa APIs Woo. Un producto variable privado por Event ID/UUID, variaciones privadas/virtuales por UUID, sin backorders y sin stock en el padre. Los tipos no se borran; precio/nombre no reescriben pedidos. Esquema comercial 1; no tablas, instalación automática, migración masiva ni checkout.
+
+Guardados: bloqueo MySQL de configuración por evento, snapshot firmado, clave de alta/reintento y verificación posterior. Un error parcial exige revisar los datos guardados, sin rollback prometido. No es un coordinador de reservas; conexiones persistentes/proxies/reconexiones y concurrencia real requieren QA antes de aceptación.
+
+Consumo cero solo con origen/stock firmado por esta instalación, sin cambios externos, pedidos del producto/tipos del evento ni holds observables. Los pedidos ajenos no bloquean ese evento; no es un ledger de reservas. Con consumo desconocido se rechazan nuevos tipos, sets absolutos de stock y reducciones de aforo; se permiten otros campos sin recalcular stock. Datos importados sin prueba y esquemas desconocidos se bloquean. Restauraciones que copien la base y sus secretos requieren revisión manual: la firma no detecta una restauración completa.
+
+Woo ausente: aviso y comandos comerciales denegados, Event Core operativo. Woo desactivado tras configuración: marcador conservador impide cambios de aforo. No modificar tipos desde el editor Woo ni eliminarlos; el servicio de Eventos conserva las referencias.
+
+QA comercial focalizada PASS el 2026-10-16 en el clon descartable: WordPress 7.1.2, PHP 8.2.29, WooCommerce 11.2.0 y HPOS activo. Se verificaron permisos, CRUD real, reintentos, fallo parcial, pedidos ajenos/relacionados, guards de capacidad, Store API y Woo ausente. No se probaron carreras de reservas ni pagos; las ventas siguen cerradas. El sitio original y producción no se tocaron.
 
 Para dar de alta a alguien: Usuarios → Añadir nuevo → Perfil: **Programador**.
 - Aviso si la zona horaria del sitio no es una ciudad (Ajustes → Generales → Buenos Aires).

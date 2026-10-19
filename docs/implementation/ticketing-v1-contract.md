@@ -596,3 +596,11 @@ Ticketing V1 está completo cuando un administrador puede:
 
 Todo esto debe funcionar sin QR, sin check-in digital y sin exigir que
 el equipo comprenda la implementación interna de WooCommerce.
+
+## 23. Extensión A9 y entrega local T1 (2026-10-12)
+
+A9 aprobada por el usuario amplía explícitamente la creación/edición de tipos, precios y cupos al Programador y al administrador, con capabilities comerciales acotadas y permiso por evento. Esto precisa las menciones anteriores a operación por administrador; no concede administración Woo general, finanzas, gateway, reembolsos, conciliación ni PII/export al Programador.
+
+T1 está implementado sin commit en `feat/t1-ticket-types`, base `7aa22adb1a0e740b8a5a588b0363d2291aafc1c9`, **NOT ACCEPTED / NOT INTEGRATED**. Implementa configuración administrativa, relaciones producto variable/variaciones, validación y protección conservadora de cupos. Ventas cerradas; ninguna afirmación de disponibilidad transaccional, reservas, checkout o pago. Fiscalidad y gateway continúan pendientes. Los contratos aprobados [T0.1](t0.1-ticketing-architecture-proposal.md) y [T1](t1-ticket-types-spec.md) se conservan intactos.
+
+Límite T1: sin ledger verificable, una línea de pedido Woo referida al producto o variaciones del evento vuelve su consumo desconocido; pedidos ajenos no bloquean su configuración. Con consumo desconocido, no stock absoluto ni reducción global. El bloqueo de configuración no es el coordinador T2 ni prueba overselling. [Casa Eventos §17](casa-eventos-contract.md#17-t1-commercial-configuration-local-review-candidate) registra protocolos y limitaciones. QA focalizada con Woo 11.2.0 y HPOS pasó en el clon descartable el 2026-10-16; T1 sigue pendiente de aceptación e integración.

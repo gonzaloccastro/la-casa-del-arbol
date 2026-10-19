@@ -70,7 +70,7 @@ foreach ( $php as $file ) {
 		continue;
 	}
 	$code = code_only( $file );
-	if ( preg_match( '/_casa_|\bMETA_[A-Z_]+|\bTERM_(COLOR|ORDER)\b|get_post_meta|update_post_meta|get_term_meta|update_term_meta/', $code, $m ) ) {
+	if ( preg_match( '/(?<![a-zA-Z0-9])_casa_|\bMETA_[A-Z_]+|\bTERM_(COLOR|ORDER)\b|get_post_meta|update_post_meta|get_term_meta|update_term_meta/', $code, $m ) ) {
 		$errors[] = $rel( $file ) . ': reads/writes Event meta outside inc/core/ (' . $m[0] . ')';
 	}
 }
@@ -78,6 +78,7 @@ foreach ( $php as $file ) {
 // 2. No WooCommerce dependency in Event Core (code, not docs).
 foreach ( array_merge( $php, $js ) as $file ) {
 	++$checks;
+	if ( 0 === strpos( $rel( $file ), 'inc/commerce/' ) ) { continue; }
 	if ( preg_match( '/woocommerce|\bWC_|\bwc_[a-z]|\bWC\(\)/i', code_only( $file ), $m ) ) {
 		$errors[] = $rel( $file ) . ': WooCommerce reference (' . $m[0] . ')';
 	}
@@ -117,14 +118,14 @@ foreach ( array_merge( $php, $js ) as $file ) {
 	}
 }
 
-// 7. Version 0.2.0 everywhere.
+// 7. Version 0.3.0 everywhere.
 ++$checks;
 $main = file_get_contents( $plugin . '/casa-eventos.php' );
 preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $main, $header );
 preg_match( "/define\( 'CASA_EVENTOS_VERSION', '([^']+)' \)/", $main, $constant );
 preg_match( '/Version:\s*\*{0,2}\s*([0-9.]+)/', (string) @file_get_contents( $plugin . '/readme.md' ), $readme );
 $versions = array( $header[1] ?? '?', $constant[1] ?? '?', $readme[1] ?? '?' );
-if ( array( '0.2.0', '0.2.0', '0.2.0' ) !== $versions ) {
+if ( array( '0.3.0', '0.3.0', '0.3.0' ) !== $versions ) {
 	$errors[] = 'version mismatch (header, constant, readme): ' . implode( ', ', $versions );
 }
 

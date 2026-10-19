@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Casa Eventos
  * Description:       Eventos de La Casa del Árbol: entidad Evento, categorías, estados, fechas y consultas (Event Core).
- * Version:           0.2.0
+ * Version:           0.3.0
  * Requires at least: 6.6
  * Requires PHP:      8.0
  * Author:            La Casa del Árbol
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CASA_EVENTOS_VERSION', '0.2.0' );
+define( 'CASA_EVENTOS_VERSION', '0.3.0' );
 define( 'CASA_EVENTOS_FILE', __FILE__ );
 define( 'CASA_EVENTOS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CASA_EVENTOS_URL', plugin_dir_url( __FILE__ ) );
@@ -42,6 +42,7 @@ require_once CASA_EVENTOS_DIR . 'inc/core/event-write.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/rest.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/queries.php';
 require_once CASA_EVENTOS_DIR . 'inc/core/visibility.php';
+require_once CASA_EVENTOS_DIR . 'inc/commerce/bootstrap.php';
 
 // Programador navigation (menu, admin bar): every request, since the admin
 // bar is also shown on the public site. Presentation only.
@@ -53,6 +54,7 @@ require_once CASA_EVENTOS_DIR . 'inc/admin/operational.php';
 // Admin UI: consumes the core API only.
 if ( is_admin() ) {
 	require_once CASA_EVENTOS_DIR . 'inc/admin/event-form.php';
+	require_once CASA_EVENTOS_DIR . 'inc/admin/ticket-types.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/editor.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/list-table.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/categories.php';

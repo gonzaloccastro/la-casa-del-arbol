@@ -32,7 +32,7 @@ const ROLE_PROGRAMADOR = 'casa_programador';
 
 // Bump whenever programador_capabilities() or administrator_capabilities()
 // change: the next request re-applies the role definition.
-const CAPS_VERSION        = 1;
+const CAPS_VERSION        = 2;
 const CAPS_VERSION_OPTION = 'casa_eventos_caps_version';
 
 /**
@@ -98,6 +98,9 @@ function programador_capabilities() {
 		$event['publish_posts'],
 		$event['read_private_posts'],
 		category_capabilities()['assign_terms'],
+		'manage_casa_ticket_types',
+		'edit_casa_ticket_prices',
+		'edit_casa_ticket_capacities',
 	);
 }
 
@@ -118,6 +121,7 @@ function administrator_capabilities() {
  */
 function plugin_capabilities() {
 	$caps = array_merge( array_values( event_capabilities() ), array_values( category_capabilities() ) );
+	$caps = array_merge( $caps, array( 'manage_casa_ticket_types', 'edit_casa_ticket_prices', 'edit_casa_ticket_capacities' ) );
 	return array_values( array_diff( array_unique( $caps ), array( 'read' ) ) );
 }
 

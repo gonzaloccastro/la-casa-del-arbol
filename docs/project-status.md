@@ -14,8 +14,9 @@ Estado documental actualizado el 2026-10-12 tras la aceptación e integración l
 | M0 | IN PROGRESS |
 | E3.1 | IMPLEMENTED / LOCAL: adaptador de escritura de eventos |
 | E3.2 | ACCEPTED / LOCALLY INTEGRATED; deployment no acreditado |
-| T0 | NEXT: arquitectura de ticketing y pagos; requiere task propio |
-| T1–T9 | POSTERIORES: T1, T2, T3, T4, T5, T6, T7, T8, T9 |
+| T0 | Arquitectura T0.1 y scope T1 aprobados como base del task local; decisiones fiscales/gateway posteriores abiertas |
+| T1 | RELEASE CANDIDATE IN FEATURE WORKTREE / NOT ACCEPTED / NOT INTEGRATED; QA comercial focalizada PASS en clon descartable |
+| T2–T9 | POSTERIORES: T2, T3, T4, T5, T6, T7, T8, T9 |
 | V1-R | POSTERIOR |
 | V1-D | POSTERIOR |
 | V1-Q | POSTERIOR |
@@ -34,7 +35,15 @@ M0 prepara el workflow multiagente: autoridad operativa común, precedencia docu
 
 Las fases posteriores requieren sus propios tasks, alcance, criterios y autorización. Esta secuencia no agrega decisiones funcionales ni define aquí el contenido de fases sin task aprobado. §21 de [Ticketing V1](implementation/ticketing-v1-contract.md) registra la prioridad original, no el roadmap vigente.
 
-## Baseline conocido al cierre de D1
+## T1: entrega local para revisión (2026-10-12)
+
+Task `T1-IMPLEMENTATION`, branch `feat/t1-ticket-types`, base `7aa22adb1a0e740b8a5a588b0363d2291aafc1c9`. Código sin commit en worktree dedicado; main intacto. Las dos especificaciones aprobadas se preservan sin reescritura: [T0.1](implementation/t0.1-ticketing-architecture-proposal.md), [T1](implementation/t1-ticket-types-spec.md). Sus etiquetas documentales anteriores no sustituyen la autorización explícita del task de implementación.
+
+Plugin 0.3.0 propuesto en este checkout: tipos/precios/cupos mediante Woo CRUD, permisos A9 acotados, UI E3.2, guards de aforo y ventas cerradas. Event Core/theme no dependen de Woo. No reservas, checkout, pagos, pedidos nuevos, emails ni export. Detalle y límites: [Casa Eventos §17](implementation/casa-eventos-contract.md#17-t1-commercial-configuration-local-review-candidate).
+
+Finalización local 2026-10-16: corregidos reintentos tras escritura parcial, detección de pedidos ajenos, edición no monetaria tras cambio de moneda, navegación «Añadir evento» del Programador y sincronización diferida del producto padre por Woo. Clon descartable `lcda-e32-qa-20261009` (sitio `azIZrpsAbv`, DB `qa_e32`, separado del original): WordPress 7.1.2, PHP 8.2.29, WooCommerce 11.2.0, MySQL 8.4.0. Plugin T1 0.3.0 copiado y activo; HPOS activo con compatibilidad. QA funcional focalizada PASS para Admin/Programador, eventos/tipos, producto/variaciones, idempotencia, fallo parcial con clave nueva, pedidos ajenos/relacionados, aforo, moneda, Woo ausente, Store API y bloqueo de compra. El bloqueo de Woo ausente se levantó solo en ese clon; correo, HTTP externo y gateways siguen aislados. Concurrencia de reservas, pagos y navegador completo no son evidencia T1; ventas siguen cerradas. Suites y diff final se registran en el handoff. No hubo commit, merge, push, deploy ni cambios en main, sitio original o producción.
+
+## Baseline conocido al cierre de D1 (histórico)
 
 | Dato | Snapshot |
 |---|---|

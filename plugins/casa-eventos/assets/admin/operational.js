@@ -3,6 +3,18 @@
 	'use strict';
 	var root = document.querySelector('.casa-operational');
 	if (!root) { return; }
+	var ticketForms = document.querySelectorAll('.casa-ticket-form');
+	ticketForms.forEach(function (form) {
+		form.addEventListener('input', function () { form.casaTicketDirty = true; });
+		form.addEventListener('change', function () { form.casaTicketDirty = true; });
+	});
+	// Register before editor normalization: a refused submission changes no fields.
+	document.querySelectorAll('.casa-operational form, .casa-ticket-form').forEach(function (form) {
+		form.addEventListener('submit', function (event) {
+			var pending = Array.prototype.some.call(ticketForms, function (other) { return other !== form && other.casaTicketDirty; });
+			if (pending && !window.confirm('Hay cambios de entradas sin guardar. ¿Continuar sin guardar esos cambios?')) { event.preventDefault(); }
+		});
+	});
 	var poster = root.querySelector('[data-poster]');
 	if (poster && wp && wp.media) {
 		var input = poster.querySelector('input[name="fields[poster_id]"]');
@@ -63,7 +75,7 @@
 				textarea.removeAttribute('name');
 			}
 		});
-		root.querySelectorAll('.casa-operational-action').forEach(function (form) {
+		document.querySelectorAll('.casa-operational-action').forEach(function (form) {
 			form.addEventListener('submit', function (event) {
 				if ((dirty || pendingContent || editorDirty()) && !window.confirm('Hay cambios editoriales sin guardar. Esta acción solo modifica el evento guardado. ¿Continuar sin guardar esos cambios?')) {
 					event.preventDefault();
@@ -71,7 +83,7 @@
 			});
 		});
 	}
-	root.querySelectorAll('form').forEach(function (form) {
+	document.querySelectorAll('.casa-operational form, .casa-ticket-form').forEach(function (form) {
 		var submitting = false;
 		form.addEventListener('submit', function (event) {
 			if (event.defaultPrevented) { return; }
