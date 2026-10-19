@@ -69,6 +69,7 @@ if ( is_admin() ) {
  * pages, no users).
  */
 function casa_eventos_activate() {
+	CasaEventos\Commerce\install_reservations();
 	CasaEventos\Core\install_roles();
 	CasaEventos\Core\register_post_type();
 	CasaEventos\Core\register_taxonomy();

@@ -12,6 +12,7 @@ function lock_name( $event_id ) {
 /** MySQL connection-owned lock. No expiring lease or new table. Fail closed. */
 function acquire( $event_id ) {
 	global $wpdb;
+	try {
 	if ( ! empty( $GLOBALS['lcda_config_locks'][ $event_id ] ) ) {
 		return owns_lock( $event_id ) ? true : error( 'busy', 'Se perdió el bloqueo de configuración. Recargá antes de reintentar.' );
 	}
@@ -19,18 +20,23 @@ function acquire( $event_id ) {
 		return error( 'busy', 'Otro guardado está en curso o no se pudo bloquear la configuración. Recargá antes de reintentar.' );
 	}
 	$GLOBALS['lcda_config_locks'][ $event_id ] = true;
+	if ( function_exists( __NAMESPACE__ . '\\refresh_locked_reads' ) ) { refresh_locked_reads( $event_id ); }
 	return true;
+	} catch ( \Throwable $exception ) { return error( 'busy', 'No se pudo comprobar el bloqueo de configuracion.' ); }
 }
 
 function owns_lock( $event_id ) {
 	global $wpdb;
+	try {
 	return isset( $wpdb ) && '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_USED_LOCK(%s) = CONNECTION_ID()', lock_name( $event_id ) ) );
+	} catch ( \Throwable $exception ) { return false; }
 }
 
 function release( $event_id ) {
 	global $wpdb;
 	if ( ! empty( $GLOBALS['lcda_config_locks'][ $event_id ] ) ) {
-		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', lock_name( $event_id ) ) );
+		try { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', lock_name( $event_id ) ) ); }
+		catch ( \Throwable $exception ) { /* A closed connection has dropped its locks. */ }
 		unset( $GLOBALS['lcda_config_locks'][ $event_id ] );
 	}
 }

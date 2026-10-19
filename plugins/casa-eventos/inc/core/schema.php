@@ -38,6 +38,16 @@ const META_END_GMT       = '_casa_end_gmt';
 const META_ENDS_GMT      = '_casa_ends_gmt';
 const META_CANCELLED_GMT = '_casa_cancelled_gmt';
 
+/** Schema-owned key test for plugins coordinating event metadata writes. */
+function is_event_meta_key( $key ) {
+	return is_string( $key ) && in_array( $key, array(
+		META_START, META_END, META_ACCESS_MODE, META_ENTRY_KIND, META_ENTRY_LABEL,
+		META_EXTERNAL_URL, META_CAPACITY, META_SALES_CLOSE, META_STATUS,
+		META_LISTED, META_FEATURED, META_UUID, META_TIMEZONE, META_START_GMT,
+		META_END_GMT, META_ENDS_GMT, META_CANCELLED_GMT,
+	), true );
+}
+
 // Category term meta.
 const TERM_COLOR = '_casa_color';
 const TERM_ORDER = '_casa_order';

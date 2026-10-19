@@ -324,3 +324,12 @@ function guard_admin_publish( $data, $postarr ) {
 	return $data;
 }
 add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\\guard_admin_publish', 10, 2 );
+
+/** Neutral write boundary consumed by the optional commercial coordinator. */
+function coordinate_event_metadata( $check, $object_id, $meta_key ) {
+	if ( null !== $check || POST_TYPE !== get_post_type( $object_id ) || ! is_event_meta_key( $meta_key ) ) { return $check; }
+	return apply_filters( 'casa_eventos/before_event_metadata', $check, $object_id, $meta_key );
+}
+add_filter( 'add_post_metadata', __NAMESPACE__ . '\\coordinate_event_metadata', 5, 3 );
+add_filter( 'update_post_metadata', __NAMESPACE__ . '\\coordinate_event_metadata', 5, 3 );
+add_filter( 'delete_post_metadata', __NAMESPACE__ . '\\coordinate_event_metadata', 5, 3 );

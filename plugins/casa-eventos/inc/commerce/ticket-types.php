@@ -107,7 +107,9 @@ function has_ticket_order( $parent ) {
 }
 
 /** Deliberately conservative about this Event's commercial history, not unrelated orders. */
-function zero_consumption( $parent ) {
+function zero_consumption( $parent, $ignore_reservations = false ) {
+	if ( ! $ignore_reservations && (int) get_option( RESERVATION_SCHEMA_OPTION, 0 ) === RESERVATION_SCHEMA
+		&& reservation_history( (int) $parent->get_meta( '_lcda_ticket_event' ) ) ) { return false; }
 	if ( ! available() || ! hash_equals( hash_hmac( 'sha256', (string) $parent->get_id(), wp_salt( 'auth' ) ), (string) $parent->get_meta( '_lcda_ticket_origin' ) ) ) { return false; }
 	if ( has_ticket_order( $parent ) ) { return false; }
 	foreach ( variations( $parent ) as $type ) {
