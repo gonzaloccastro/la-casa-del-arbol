@@ -395,6 +395,7 @@ function record_payment_outcome( $event_id, $reservation_id, $request_key, $atte
 		$evidence_hash = hash( 'sha256', $evidence_key );
 		if ( ! hash_equals( (string) $row->attempt_hash, $attempt_hash ) ) { return error( 'conflict', 'El intento no corresponde a la reserva.' ); }
 		if ( 'paid' === $outcome && 'paid' === $row->status && hash_equals( (string) $row->payment_hash, $evidence_hash ) ) {
+			do_action( 'casa_eventos/reservation_paid', $event_id, $reservation_id, (int) $row->order_id, (string) $row->payment_hash );
 			return reservation_result( $row, $now, true );
 		}
 		if ( 'failed' === $outcome && in_array( $row->status, array( 'checkout_active', 'failed' ), true )
@@ -405,6 +406,7 @@ function record_payment_outcome( $event_id, $reservation_id, $request_key, $atte
 		if ( 1 !== $updated ) { return error( 'uncertain', 'El resultado requiere conciliacion.' ); }
 		$row->status = $target;
 		$row->payment_hash = $evidence_hash;
+		if ( 'paid' === $target ) { do_action( 'casa_eventos/reservation_paid', $event_id, $reservation_id, (int) $row->order_id, $evidence_hash ); }
 		return reservation_result( $row, $now, false );
 	} catch ( \Throwable $exception ) { return error( 'uncertain', 'El pago requiere conciliacion.' ); }
 	finally { if ( ! $owned_before ) { release( $event_id ); } }

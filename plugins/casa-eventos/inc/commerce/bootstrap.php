@@ -9,6 +9,7 @@ require_once __DIR__ . '/capacity-guard.php';
 require_once __DIR__ . '/ticket-write.php';
 require_once __DIR__ . '/reservations.php';
 require_once __DIR__ . '/checkout.php';
+require_once __DIR__ . '/tickets.php';
 require_once __DIR__ . '/purchase-guard.php';
 
 function available() {
