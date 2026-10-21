@@ -55,6 +55,7 @@ require_once CASA_EVENTOS_DIR . 'inc/admin/operational.php';
 if ( is_admin() ) {
 	require_once CASA_EVENTOS_DIR . 'inc/admin/event-form.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/ticket-types.php';
+	require_once CASA_EVENTOS_DIR . 'inc/admin/export.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/editor.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/list-table.php';
 	require_once CASA_EVENTOS_DIR . 'inc/admin/categories.php';

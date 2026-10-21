@@ -272,6 +272,7 @@ function operational_page() {
 	if ( ! $view ) { return; }
 	render_operational_form( $view['snapshot'], $view['result'], $view['request'] );
 	render_ticket_types( $view['snapshot']['id'], $GLOBALS['casa_ticket_result'] ?? null, $view['request'] );
+	render_buyer_export( $view['snapshot']['id'] );
 }
 
 function enqueue_operational_assets( $hook ) {
