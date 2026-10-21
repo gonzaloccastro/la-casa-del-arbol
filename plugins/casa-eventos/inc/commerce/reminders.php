@@ -134,16 +134,19 @@ function reminder_data( $order_id, $now = null ) {
 		}
 	}
 	if ( ! is_array( $rows ) || count( $rows ) !== count( $expected ) || ! $rows ) { return error( 'reminder_tickets', 'Las entradas no estan completas.' ); }
+	$valid_units = 0;
 	foreach ( $rows as $row ) {
 		$key = $row->order_item_id . ':' . $row->unit_number;
 		if ( ! isset( $expected[ $key ] ) || $expected[ $key ] !== (int) $row->ticket_type_id
 			|| (int) $row->event_id !== (int) $source['event_id'] || (int) $row->reservation_id !== (int) $source['row']->id
-			|| 'issued' !== $row->status || ! preg_match( '/^[a-f0-9]{64}$/D', (string) $row->ticket_code ) ) {
+			|| ! in_array( $row->status, array( 'issued', 'revoked' ), true )
+			|| ! preg_match( '/^[a-f0-9]{64}$/D', (string) $row->ticket_code ) ) {
 			return error( 'reminder_tickets', 'Una entrada ya no es valida.' );
 		}
+		if ( 'issued' === $row->status ) { ++$valid_units; }
 		unset( $expected[ $key ] );
 	}
-	if ( $expected ) { return error( 'reminder_tickets', 'Faltan entradas.' ); }
+	if ( $expected || ! $valid_units ) { return error( 'reminder_tickets', 'Faltan entradas vigentes.' ); }
 	$data = ticket_confirmation_data( $order_id );
 	if ( is_wp_error( $data ) ) { return $data; }
 	$data['event'] = array(

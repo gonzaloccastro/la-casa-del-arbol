@@ -114,7 +114,7 @@ function ticket_orders_reconciled( $parent ) {
 	$page = 1;
 	try {
 		do {
-			$results = wc_get_orders( array( 'limit' => 50, 'paged' => $page, 'paginate' => true, 'return' => 'objects',
+			$results = wc_get_orders( array( 'type' => 'shop_order', 'limit' => 50, 'paged' => $page, 'paginate' => true, 'return' => 'objects',
 				'status' => array_merge( array_keys( wc_get_order_statuses() ), array( 'trash' ) ) ) );
 			if ( ! is_object( $results ) || ! isset( $results->orders, $results->max_num_pages ) || ! is_array( $results->orders ) ) { return false; }
 			foreach ( $results->orders as $order ) {
@@ -128,12 +128,18 @@ function ticket_orders_reconciled( $parent ) {
 				}
 				if ( ! $found ) { continue; }
 				if ( count( $lines ) !== count( $order->get_items( 'line_item' ) ) ) { return false; }
-				if ( 'pending' !== $order->get_status() || 'lcda-ticket' !== $order->get_created_via()
+				if ( ! in_array( $order->get_status(), array( 'pending', 'processing', 'completed', 'refunded' ), true ) || 'lcda-ticket' !== $order->get_created_via()
 					|| (int) $order->get_meta( '_lcda_ticket_event_id' ) !== $event_id
 					|| ! $order->get_data_store() || $order->get_data_store()->get_stock_reduced( $order->get_id() ) ) { return false; }
 				$row = reservation_by_id( $event_id, (int) $order->get_meta( '_lcda_ticket_reservation_id' ) );
-				if ( is_wp_error( $row ) || ! $row || ! in_array( $row->status, array( 'checkout_active', 'payment_pending', 'submitting' ), true ) || (int) $row->order_id !== $order->get_id()
+				$allowed_statuses = 'pending' === $order->get_status()
+					? array( 'checkout_active', 'payment_pending', 'submitting' )
+					: ( 'refunded' === $order->get_status() ? array( 'refunded' ) : array( 'paid', 'refunded' ) );
+				if ( is_wp_error( $row ) || ! $row || ! in_array( $row->status, $allowed_statuses, true ) || (int) $row->order_id !== $order->get_id()
 					|| ! hash_equals( (string) $row->request_hash, (string) $order->get_meta( '_lcda_ticket_request_hash' ) ) ) { return false; }
+				if ( 'pending' !== $order->get_status() && ( ! $order->get_date_paid()
+					|| ! preg_match( '/^[a-f0-9]{64}$/D', (string) $row->payment_hash ) ) ) { return false; }
+				if ( 'pending' !== $order->get_status() && ! refund_woo_reconciled( $order, $row ) ) { return false; }
 				$expected = json_decode( (string) $row->quantities, true );
 				if ( ! is_array( $expected ) || count( $lines ) !== count( $expected ) ) { return false; }
 				foreach ( $expected as $type_id => $quantity ) {

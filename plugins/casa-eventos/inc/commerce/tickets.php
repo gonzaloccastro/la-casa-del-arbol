@@ -179,16 +179,18 @@ function ticket_confirmation_data( $order_id ) {
 	$event = $source['order']->get_meta( '_lcda_ticket_event_snapshot' );
 	if ( ! is_array( $event ) || empty( $event['title'] ) || empty( $event['start_local'] ) ) { return error( 'ticket_event', 'Faltan datos del evento para la confirmacion.' ); }
 	global $wpdb;
-	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT ticket_code,ticket_type_id FROM ' . tickets_table() . ' WHERE order_id = %d ORDER BY ticket_type_id,id', (int) $order_id ), ARRAY_A );
+	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT ticket_code,ticket_type_id,status FROM ' . tickets_table() . ' WHERE order_id = %d ORDER BY ticket_type_id,id', (int) $order_id ), ARRAY_A );
 	$expected_count = array_sum( array_map( 'intval', json_decode( (string) $source['row']->quantities, true ) ) );
 	if ( ! is_array( $rows ) || ! $rows || count( $rows ) !== $expected_count ) { return error( 'ticket_missing', 'Las entradas aun no estan disponibles.' ); }
 	$groups = array();
 	foreach ( $rows as $ticket ) {
+		if ( 'issued' !== $ticket['status'] ) { continue; }
 		$type_id = (int) $ticket['ticket_type_id'];
 		if ( ! isset( $groups[ $type_id ] ) ) { $groups[ $type_id ] = array( 'name' => '', 'codes' => array() ); }
 		foreach ( $source['items'] as $item ) { if ( (int) $item->get_variation_id() === $type_id ) { $groups[ $type_id ]['name'] = $item->get_name(); break; } }
 		$groups[ $type_id ]['codes'][] = (string) $ticket['ticket_code'];
 	}
+	if ( ! $groups ) { return error( 'ticket_missing', 'No quedan entradas vigentes.' ); }
 	foreach ( $groups as &$group ) { $group['quantity'] = count( $group['codes'] ); } unset( $group );
 	return array( 'order' => $source['order'], 'event' => $event, 'groups' => array_values( $groups ), 'site_name' => wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) );
 }

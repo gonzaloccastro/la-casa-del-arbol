@@ -150,9 +150,15 @@ t_eq( true, Commerce\record_payment_outcome( $id, $two['id'], $two_key, $attempt
 t_eq( 10, Commerce\reservation_held( $GLOBALS['wpdb']->rows, $now + 3602 )['global'], 'paid capacity retained as sold occupancy' );
 t2_error( 'conflict', Commerce\record_payment_outcome( $id, $two['id'], $two_key, $attempt_key, 'failed', 'receipt-2', $now + 3602 ), 'late failure cannot undo paid state' );
 $refunded = Commerce\record_confirmed_refund( $id, $two['id'], $two_key, 'refund-1', $now + 3603 );
-t_eq( 'refunded', $refunded['status'], 'confirmed full refund releases capacity' );
-t_eq( true, Commerce\record_confirmed_refund( $id, $two['id'], $two_key, 'refund-1', $now + 3604 )['replayed'], 'refund idempotent' );
-t_eq( 0, Commerce\reservation_held( $GLOBALS['wpdb']->rows, $now + 3604 )['global'], 'refund releases once' );
+t2_error( 'refund_evidence', $refunded, 'bare refund reference cannot establish gateway evidence' );
+t_eq( 10, Commerce\reservation_held( $GLOBALS['wpdb']->rows, $now + 3604 )['global'], 'unverified refund keeps capacity occupied' );
+$mixed = array( (object) array( 'id' => 999, 'status' => 'paid', 'expires_at' => 0,
+	'quantities' => wp_json_encode( array( $a => 2, $b => 1 ) ) ) );
+$partial = Commerce\reservation_held( $mixed, $now, array( 999 => array( $a => 1 ) ) );
+t_eq( 2, $partial['global'], 'confirmed partial refund restores one event place' );
+t_eq( 1, $partial['types'][ $a ], 'confirmed partial refund restores only selected ticket type' );
+t_eq( 1, $partial['types'][ $b ], 'unaffected ticket type remains occupied' );
+t2_error( 'ledger', Commerce\reservation_held( $mixed, $now, array( 999 => array( $a => 3 ) ) ), 'over-refund freezes capacity' );
 
 t_group( 'T2/interrupted write' );
 $id = t2_fixture();

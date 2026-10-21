@@ -79,8 +79,13 @@ function export_order_rows( $order, $event_id ) {
 		$state = ! $paid ? ( 'pending' === $order->get_status() ? 'Reserva pendiente de pago' : 'Sin pago confirmado' )
 			: ( count( $issued ) === $quantity ? 'Emitidas' : ( $issued ? 'Emisión parcial' : 'Pendiente de emisión' ) );
 		$unit_price = (string) $item->get_meta( '_lcda_ticket_unit_price' );
+		$revoked = 0;
+		foreach ( $line_codes as $unit => $record ) {
+			if ( $unit <= $quantity && 'revoked' === $record['status'] ) { ++$revoked; }
+		}
+		if ( $revoked ) { $state = $issued ? 'Reembolso parcial: ' . $revoked . ' invalidada(s)' : 'Reembolsada'; }
 		$rows[] = array( $order->get_id(), $created, $order->get_billing_first_name(), $order->get_billing_last_name(),
-			$order->get_billing_email(), $order->get_billing_phone(), $item->get_name(), $quantity,
+			$order->get_billing_email(), $order->get_billing_phone(), $item->get_name(), $quantity - $revoked,
 			is_numeric( $unit_price ) ? $unit_price : '', $item->get_total(), $order->get_total(), $order->get_currency(),
 			wc_get_order_status_name( $order->get_status() ), implode( ', ', $issued ), $state, '' );
 	}

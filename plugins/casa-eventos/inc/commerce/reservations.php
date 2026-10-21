@@ -87,7 +87,7 @@ function reservation_lines( $lines ) {
 }
 
 /** Pure occupancy projection; malformed rows freeze admission. */
-function reservation_held( $rows, $now ) {
+function reservation_held( $rows, $now, $refunds = array() ) {
 	$by_type = array();
 	$global = 0;
 	if ( ! is_array( $rows ) ) { return error( 'ledger', 'No se puede verificar la ocupación.' ); }
@@ -101,13 +101,20 @@ function reservation_held( $rows, $now ) {
 		if ( ! $held ) { continue; }
 		$lines = json_decode( (string) $row->quantities, true );
 		if ( ! is_array( $lines ) || ! $lines ) { return error( 'ledger', 'La reserva guardada es inválida.' ); }
+		$released = $refunds[ (int) ( $row->id ?? 0 ) ] ?? array();
 		foreach ( $lines as $type_id => $quantity ) {
 			$id = integer_value( $type_id, 1 );
 			$qty = integer_value( $quantity, 1, 10 );
 			if ( null === $id || null === $qty ) { return error( 'ledger', 'La reserva guardada es inválida.' ); }
-			$by_type[ $id ] = ( $by_type[ $id ] ?? 0 ) + $qty;
-			$global += $qty;
+			$refund_qty = (int) ( $released[ $id ] ?? 0 );
+			if ( $refund_qty < 0 || $refund_qty > $qty || ( $refund_qty && 'paid' !== $status ) ) {
+				return error( 'ledger', 'La restitucion requiere conciliacion.' );
+			}
+			$by_type[ $id ] = ( $by_type[ $id ] ?? 0 ) + $qty - $refund_qty;
+			$global += $qty - $refund_qty;
+			unset( $released[ $id ] );
 		}
+		if ( $released ) { return error( 'ledger', 'La restitucion requiere conciliacion.' ); }
 	}
 	return array( 'global' => $global, 'types' => $by_type );
 }
@@ -200,9 +207,16 @@ function reserve( $event_id, $lines, $request_key, $now = null, $session_hash = 
 		if ( is_wp_error( $parent ) || ! $parent || ! zero_consumption( $parent, true ) ) {
 			return error( 'unknown', 'El stock requiere conciliación antes de reservar.' );
 		}
-		$held_rows = $wpdb->get_results( $wpdb->prepare( 'SELECT status,expires_at,quantities FROM ' . reservation_table() . ' WHERE event_id = %d', $event_id ) );
+		$held_rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id,status,expires_at,quantities FROM ' . reservation_table() . ' WHERE event_id = %d', $event_id ) );
 		if ( $wpdb->last_error ) { return error( 'ledger', 'No se puede consultar la ocupación.' ); }
-		$held = reservation_held( $held_rows, $now );
+		$has_paid_history = false;
+		foreach ( (array) $held_rows as $held_row ) {
+			if ( in_array( (string) $held_row->status, array( 'paid', 'refunded' ), true ) ) { $has_paid_history = true; break; }
+		}
+		$refunds = (int) get_option( REFUND_SCHEMA_OPTION, 0 ) !== REFUND_SCHEMA && ! $has_paid_history
+			? array() : confirmed_refund_quantities( $event_id );
+		if ( is_wp_error( $refunds ) ) { return $refunds; }
+		$held = reservation_held( $held_rows, $now, $refunds );
 		if ( is_wp_error( $held ) ) { return $held; }
 		$quantities = array_values( $normalized );
 		if ( array_sum( $quantities ) > $event->capacity() - $held['global'] ) {
@@ -412,30 +426,9 @@ function record_payment_outcome( $event_id, $reservation_id, $request_key, $atte
 	finally { if ( ! $owned_before ) { release( $event_id ); } }
 }
 
-/** Called only after a full refund and any Woo stock restoration are verified. */
+/** Legacy entry point deliberately closed: references are not gateway proof. */
 function record_confirmed_refund( $event_id, $reservation_id, $request_key, $refund_reference, $now = null ) {
-	$event_id = integer_value( $event_id, 1 );
-	$reservation_id = integer_value( $reservation_id, 1 );
-	if ( null === $event_id || null === $reservation_id || ! is_string( $refund_reference )
-		|| '' === $refund_reference || strlen( $refund_reference ) > 200 ) { return error( 'request', 'El reembolso es invalido.' ); }
-	$now = null === $now ? time() : integer_value( $now, 0 );
-	if ( null === $now ) { return error( 'request', 'El reloj no es valido.' ); }
-	$owned_before = ! empty( $GLOBALS['lcda_config_locks'][ $event_id ] );
-	$lock = acquire( $event_id );
-	if ( is_wp_error( $lock ) ) { return $lock; }
-	try {
-		$row = reservation_owner_row( $event_id, $reservation_id, $request_key );
-		if ( is_wp_error( $row ) ) { return $row; }
-		$hash = hash( 'sha256', $refund_reference );
-		if ( 'refunded' === $row->status && hash_equals( (string) $row->refund_hash, $hash ) ) { return reservation_result( $row, $now, true ); }
-		if ( 'paid' !== $row->status ) { return error( 'conflict', 'El reembolso exige una compra pagada.' ); }
-		$updated = reservation_update( $event_id, $reservation_id, 'paid', 'refunded', null, null, array( 'refund_hash' => $hash ) );
-		if ( 1 !== $updated ) { return error( 'uncertain', 'El reembolso requiere conciliacion.' ); }
-		$row->status = 'refunded';
-		$row->refund_hash = $hash;
-		return reservation_result( $row, $now, false );
-	} catch ( \Throwable $exception ) { return error( 'uncertain', 'El reembolso requiere conciliacion.' ); }
-	finally { if ( ! $owned_before ) { release( $event_id ); } }
+	return error( 'refund_evidence', 'Usa la conciliacion T6 con evidencia verificada.' );
 }
 
 /** Cleanup is optional for correctness: admission excludes expired active rows by time. */
