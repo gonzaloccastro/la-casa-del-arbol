@@ -137,6 +137,7 @@ function issue_paid_reservation_tickets( $event_id, $reservation_id, $order_id, 
 	if ( false === $queued ) { return error( 'ticket_mail_queue', 'La confirmacion requiere reintento.' ); }
 	$mail_state = $wpdb->get_row( $wpdb->prepare( "SELECT status,next_attempt FROM $mail WHERE order_id = %d", $order_id ) );
 	if ( $mail_state && in_array( $mail_state->status, array( 'pending', 'retry' ), true ) ) { schedule_ticket_mail( $order_id, max( time() + 5, (int) $mail_state->next_attempt ) ); }
+	queue_ticket_reminder( $order_id, $event_id );
 	return array( 'order_id' => (int) $order_id, 'reservation_id' => (int) $reservation_id, 'count' => count( $rows ), 'replayed' => 0 === $queued );
 }
 
