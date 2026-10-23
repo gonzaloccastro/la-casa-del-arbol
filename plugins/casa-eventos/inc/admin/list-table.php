@@ -314,15 +314,23 @@ function operational_edit_link( $link, $post_id, $context ) {
 	}
 	return $link;
 }
-add_filter( 'get_edit_post_link', __NAMESPACE__ . '\\operational_edit_link', 10, 3 );
+add_filter( 'get_edit_post_link', __NAMESPACE__ . '\\operational_edit_link', PHP_INT_MAX, 3 );
 
 function operational_row_actions( $actions, $post ) {
 	if ( Core\is_programador() && Core\POST_TYPE === $post->post_type ) {
 		unset( $actions['inline hide-if-no-js'], $actions['trash'], $actions['delete'] );
+		if ( isset( $actions['edit'] ) && current_user_can( 'edit_post', $post->ID ) ) {
+			$actions['edit'] = sprintf(
+				'<a href="%s" aria-label="%s">%s</a>',
+				esc_url( operational_url( (int) $post->ID ) ),
+				esc_attr( sprintf( __( 'Editar el evento “%s”', 'casa-eventos' ), $post->post_title ) ),
+				esc_html__( 'Editar', 'casa-eventos' )
+			);
+		}
 	}
 	return $actions;
 }
-add_filter( 'post_row_actions', __NAMESPACE__ . '\\operational_row_actions', 10, 2 );
+add_filter( 'post_row_actions', __NAMESPACE__ . '\\operational_row_actions', PHP_INT_MAX, 2 );
 
 function operational_bulk_actions( $actions ) {
 	return Core\is_programador() ? array() : $actions;

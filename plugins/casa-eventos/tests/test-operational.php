@@ -250,11 +250,20 @@ t_eq( null, Admin\operational_native_route( 'edit.php', 'GET', array( 'post_type
 t_eq( null, Admin\operational_native_route( 'post.php', 'POST', array( 'post_ID' => (string) $image ) ), 'own attachment path unaffected' );
 t_eq( null, Admin\operational_native_route( 'upload.php', 'GET', array() ), 'media unaffected' );
 t_eq( array(), Admin\operational_bulk_actions( array( 'edit' => 'Edit' ) ), 'bulk UI absent for Programador' );
-t_eq( array( 'edit' => 'Edit' ), Admin\operational_row_actions( array( 'edit' => 'Edit', 'inline hide-if-no-js' => 'Quick', 'trash' => 'Trash' ), get_post( $id ) ), 'native row writers removed' );
+$row_actions = Admin\operational_row_actions( array(
+	'edit' => '<a href="http://site.test/wp-admin/post.php?post=' . $id . '&action=edit">Edit</a>',
+	'inline hide-if-no-js' => 'Quick', 'trash' => 'Trash', 'casa_ticket_types' => 'Tickets',
+), get_post( $id ) );
+t_ok( strpos( $row_actions['edit'], esc_url( Admin\operational_url( $id ) ) ) !== false, 'Programador Editar row action uses operational form' );
+t_ok( ! isset( $row_actions['inline hide-if-no-js'] ) && ! isset( $row_actions['trash'] ) && 'Tickets' === $row_actions['casa_ticket_types'], 'native writers removed; ticket shortcut preserved' );
+t_eq( Admin\operational_url( $id ), Admin\operational_edit_link( 'http://site.test/wp-admin/post.php?post=' . $id . '&action=edit', $id, 'display' ), 'Programador title edit link uses operational form' );
 $GLOBALS['t_caps']['manage_options'] = true;
 $GLOBALS['t_current_user'] = new WP_User( 1, array( 'administrator' ), array( 'manage_options' ) );
 foreach ( $cases as list( $page_name, $method, $request ) ) { t_eq( null, Admin\operational_native_route( $page_name, $method, $request ), 'administrator native path retained' ); }
 t_eq( 'http://site.test/wp-admin/post-new.php?post_type=casa_evento', Admin\operational_new_event_url( 'http://site.test/wp-admin/post-new.php?post_type=casa_evento', 'post-new.php?post_type=casa_evento' ), 'administrator native create URL retained' );
+t_eq( array( 'edit' => 'Native' ), Admin\operational_row_actions( array( 'edit' => 'Native' ), get_post( $id ) ), 'administrator Editar unchanged' );
+t_eq( 'native-link', Admin\operational_edit_link( 'native-link', $id, 'display' ), 'administrator title edit link unchanged' );
+
 $GLOBALS['t_caps']['manage_options'] = false;
 $GLOBALS['t_current_user'] = new WP_User( 21, array( 'casa_programador' ), array_keys( array_filter( $GLOBALS['t_caps'] ) ) );
 
