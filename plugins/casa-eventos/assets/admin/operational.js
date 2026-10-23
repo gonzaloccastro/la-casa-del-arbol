@@ -3,6 +3,8 @@
 	'use strict';
 	var root = document.querySelector('.casa-operational');
 	if (!root) { return; }
+	var error = document.querySelector('#e32-errors');
+	if (error && typeof error.focus === 'function') { error.focus(); }
 	var ticketForms = document.querySelectorAll('.casa-ticket-form');
 	ticketForms.forEach(function (form) {
 		form.addEventListener('input', function () { form.casaTicketDirty = true; });

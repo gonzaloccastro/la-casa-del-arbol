@@ -59,6 +59,7 @@ try {
 	$xml = $zip->getFromName( 'xl/worksheets/sheet1.xml' ); $zip->close();
 	qa_assert( substr_count( $xml, '<row ' ) === 1, 'empty XLSX must contain headers only' );
 	$paid = qa_order( $event_id, 'processing', array( 'General' => 2, 'Anticipada' => 1 ) ); $orders[] = $paid;
+	qa_assert( 'ARS' === wc_get_order( $paid->get_id() )->get_currency(), 'synthetic order currency snapshot was not persisted as ARS' );
 	$pending = qa_order( $event_id, 'pending', array( 'General' => 1 ) ); $orders[] = $pending;
 	$buyer = Commerce\checkout_buyer( array( 'first_name' => 'QA', 'last_name' => 'Comprador', 'email' => 'qa@example.invalid', 'phone' => '+541111111111', 'newsletter' => '0' ) );
 	qa_assert( is_array( $buyer ) && 'qa@example.invalid' === $buyer['email'], 'T3 buyer validation regression' );
@@ -91,6 +92,7 @@ try {
 	$zip->close();
 	$doc = new DOMDocument(); qa_assert( $doc->loadXML( $xml ), 'worksheet invalid XML' );
 	qa_assert( substr_count( $xml, '<row ' ) === 4, 'expected three lines plus header, with no duplicate' );
+	qa_assert( 3 === substr_count( $xml, '>ARS<' ), 'XLSX must retain ARS for each exported order line' );
 	preg_match( '/<c r="C2".*?<\/c>/', $xml, $formula_cell );
 	qa_assert( false !== strpos( $formula_cell[0] ?? '', '&apos;=HYPERLINK' ) && false === strpos( $xml, '<f>' ), 'formula not neutralized' );
 	qa_assert( false !== strpos( $xml, 'Emitidas' ) && false !== strpos( $xml, 'Pendiente de emisión' ) && false !== strpos( $xml, 'Reserva pendiente de pago' ), 'issuance states missing' );

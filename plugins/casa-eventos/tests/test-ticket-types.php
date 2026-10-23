@@ -191,7 +191,7 @@ tt_error( 'casa_tickets_forbidden', tt_save( $id, $tid, array( 'price' => '1' ) 
 $GLOBALS['t_caps']['edit_casa_ticket_prices'] = true;
 ob_start(); Admin\render_ticket_types( $id ); $html = ob_get_clean();
 t_ok( str_contains( $html, 'ticket_nonce' ) && str_contains( $html, 'ticket_state' ) && str_contains( $html, 'ticket_key' ), 'forms contain scoped transport controls' );
-t_ok( str_contains( $html, 'venta propia' ) && ! str_contains( $html, 'Comprar' ), 'configuration UI does not offer sales' );
+t_ok( str_contains( $html, 'venta pública de entradas sigue deshabilitada' ) && ! str_contains( $html, 'Comprar' ), 'configuration UI does not offer sales' );
 t_ok( isset( Admin\ticket_configuration_link( array(), get_post( $id ) )['casa_ticket_types'] ), 'authorized administrator or Programador has direct list link' );
 $GLOBALS['t_denied_posts'] = array( $id );
 t_eq( array(), Admin\ticket_configuration_link( array(), get_post( $id ) ), 'unauthorized event never gets commercial link' );

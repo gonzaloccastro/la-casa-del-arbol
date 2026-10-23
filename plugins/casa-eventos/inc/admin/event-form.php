@@ -129,20 +129,21 @@ function render_operational_form( array $snapshot, $result = null, array $reques
 	$editorial_actions = array_intersect_key( $actions, array_flip( array( 'save_draft', 'publish', 'update', 'preserve' ) ) );
 	// Retained input is unsaved even when a newly initialized editor is clean.
 	$content_pending = ! $snapshot['content_protected'] && $values['content'] !== $snapshot['fields']['content'];
+	echo '<p class="casa-operational-sales-note" role="status">' . esc_html__( 'Venta pública de entradas deshabilitada. Configurar el evento y sus tipos no habilita compras.', 'casa-eventos' ) . '</p>';
 	echo '<form method="post" action="' . esc_url( operational_url( $id ) ) . '" class="casa-operational-editorial" data-content-pending="' . ( $content_pending ? '1' : '0' ) . '">';
 	operational_form_security( $snapshot, array_keys( $editorial_actions ) );
-	echo '<h2>' . esc_html__( 'Datos del evento', 'casa-eventos' ) . '</h2>';
+	echo '<section class="casa-operational-group" aria-labelledby="casa-group-details"><h2 id="casa-group-details">' . esc_html__( 'Datos del evento', 'casa-eventos' ) . '</h2>';
 	operational_control( 'title', __( 'Título', 'casa-eventos' ), $values['title'], 'text', null, __( 'Obligatorio para publicar.', 'casa-eventos' ) );
 	operational_control( 'excerpt', __( 'Bajada', 'casa-eventos' ), $values['excerpt'], 'textarea' );
 	if ( $snapshot['content_protected'] ) {
 		operational_notice( 'warning', __( 'La descripción contiene bloques y se conserva sin modificar. Para editarla, pedí ayuda a un administrador.', 'casa-eventos' ) );
 	} else {
-		echo '<div class="casa-operational-field"><label for="e32-content">' . esc_html__( 'Descripción', 'casa-eventos' ) . '</label>';
+		echo '<div class="casa-operational-field casa-operational-field-wide"><label for="e32-content">' . esc_html__( 'Descripción', 'casa-eventos' ) . '</label>';
 		wp_editor( $values['content'], 'e32-content', array( 'textarea_name' => 'fields[content]', 'media_buttons' => false, 'wpautop' => false, 'teeny' => true, 'quicktags' => false, 'textarea_rows' => 8, 'tinymce' => array( 'toolbar1' => 'bold,italic,bullist,numlist,link,unlink,undo,redo', 'toolbar2' => '' ) ) );
 		echo '</div>';
 	}
 	if ( current_user_can( 'upload_files' ) ) {
-		echo '<div class="casa-operational-field" data-poster><label>' . esc_html__( 'Afiche', 'casa-eventos' ) . '</label>';
+		echo '<div class="casa-operational-field casa-operational-field-wide" data-poster><label>' . esc_html__( 'Afiche', 'casa-eventos' ) . '</label>';
 		operational_hidden( 'fields[poster_id]', $values['poster_id'] );
 		echo '<div data-poster-preview>';
 		$poster = operational_id( $values['poster_id'] );
@@ -158,7 +159,7 @@ function render_operational_form( array $snapshot, $result = null, array $reques
 	}
 	operational_control( 'start', __( 'Inicio', 'casa-eventos' ), $values['start'], 'datetime-local', null, __( 'Obligatorio para publicar.', 'casa-eventos' ) );
 	operational_control( 'end', __( 'Fin', 'casa-eventos' ), $values['end'], 'datetime-local', null, __( 'Opcional; dejar vacío conserva el cálculo automático del fin.', 'casa-eventos' ) );
-	echo '<h2>' . esc_html__( 'Acceso', 'casa-eventos' ) . '</h2>';
+	echo '</section><section class="casa-operational-group" aria-labelledby="casa-group-access"><h2 id="casa-group-access">' . esc_html__( 'Acceso', 'casa-eventos' ) . '</h2>';
 	operational_control( 'access_mode', __( 'Modalidad de acceso', 'casa-eventos' ), $values['access_mode'], 'text', array( '' => __( 'Sin especificar', 'casa-eventos' ) ) + Core\access_mode_labels() );
 	echo '<p data-tickets-note' . ( Core\ACCESS_TICKETS !== $values['access_mode'] ? ' hidden' : '' ) . '>' . esc_html__( 'La venta propia todavía no está disponible; el evento se publica sin botón de compra.', 'casa-eventos' ) . '</p>';
 	operational_control( 'entry_kind', __( 'Tipo de entrada', 'casa-eventos' ), $values['entry_kind'], 'text', array( '' => __( 'Sin especificar', 'casa-eventos' ) ) + Core\entry_kind_labels() );
@@ -167,16 +168,16 @@ function render_operational_form( array $snapshot, $result = null, array $reques
 	echo '<div data-external-url>';
 	operational_control( 'external_url', __( 'Enlace externo', 'casa-eventos' ), $values['external_url'], 'url', null, __( 'Obligatorio en modalidad externa. Se conserva al cambiar de modalidad.', 'casa-eventos' ) );
 	echo '</div>';
-	operational_control( 'capacity', __( 'Aforo', 'casa-eventos' ), $values['capacity'], 'text', null, sprintf( __( 'Vacío restablece el aforo predeterminado: %d.', 'casa-eventos' ), Core\default_capacity() ) );
+	operational_control( 'capacity', __( 'Aforo global del evento', 'casa-eventos' ), $values['capacity'], 'text', null, sprintf( __( 'Vacío restablece el aforo predeterminado: %d. Limita la suma de todos los tipos de entrada.', 'casa-eventos' ), Core\default_capacity() ) );
 	operational_control( 'sales_close', __( 'Cierre de venta', 'casa-eventos' ), $values['sales_close'], 'datetime-local', null, __( 'Vacío usa el cierre automático. Se aplica a la venta propia.', 'casa-eventos' ) );
-	echo '<h2>' . esc_html__( 'Visibilidad', 'casa-eventos' ) . '</h2>';
+	echo '</section><section class="casa-operational-group" aria-labelledby="casa-group-visibility"><h2 id="casa-group-visibility">' . esc_html__( 'Visibilidad', 'casa-eventos' ) . '</h2>';
 	foreach ( array( 'listed' => 'En Agenda', 'featured' => 'Destacado en Home' ) as $key => $label ) {
 		operational_hidden( 'fields[' . $key . ']', '0' );
 		echo '<p><label><input type="checkbox" name="fields[' . esc_attr( $key ) . ']" value="1"' . ( '1' === $values[ $key ] ? ' checked' : '' ) . '> ' . esc_html( __( $label, 'casa-eventos' ) ) . '</label></p>';
 	}
-	echo '<p>' . esc_html__( 'Fuera de Agenda conserva su URL pública. Destacado depende de la elegibilidad del evento.', 'casa-eventos' ) . '</p><p class="casa-operational-buttons">';
+	echo '<p>' . esc_html__( 'Fuera de Agenda conserva su URL pública. Destacado depende de la elegibilidad del evento.', 'casa-eventos' ) . '</p></section><div class="casa-operational-buttons" role="group" aria-label="Guardar evento">';
 	foreach ( $editorial_actions as $intent => $label ) { printf( '<button class="button button-primary" name="intent" value="%s">%s</button> ', esc_attr( $intent ), esc_html( __( $label, 'casa-eventos' ) ) ); }
-	echo '</p></form>';
+	echo '</div></form>';
 	if ( $id ) {
 		echo '<section><h2>' . esc_html__( 'Acciones sobre el evento guardado', 'casa-eventos' ) . '</h2><p>' . esc_html__( 'Guardá primero los cambios del formulario. Estas acciones no guardan cambios editoriales pendientes y no cambian la publicación, salvo Volver a borrador.', 'casa-eventos' ) . '</p>';
 		if ( Core\STATUS_CANCELLED === $snapshot['fields']['status'] && ! $snapshot['can_reactivate'] ) { operational_notice( 'warning', __( 'Evento cancelado. Solo un administrador puede reactivarlo.', 'casa-eventos' ) ); }

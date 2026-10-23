@@ -1,11 +1,71 @@
-/* Styles are scoped to the E3.2 operational page. */
-.casa-operational { max-width: 900px; }
-.casa-operational form, .casa-operational section { margin: 1.5rem 0; }
-.casa-operational-field { margin: 1rem 0; }
-.casa-operational-field > label { display: block; font-weight: 600; margin-bottom: .4rem; }
-.casa-operational-field input:not([type="checkbox"]), .casa-operational-field select, .casa-operational-field textarea { width: 100%; max-width: 42rem; }
+/* Scoped to the server-rendered event operations page. */
+.casa-operational, .casa-ticket-types { max-width: 1040px; }
+.casa-operational > h1 { margin-bottom: .5rem; }
+.casa-operational-editorial { margin: 1.25rem 0 2rem; }
+.casa-operational-group, .casa-ticket-types, .casa-operational > section {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	padding: 1.25rem 1.5rem;
+	margin: 1rem 0;
+}
+.casa-operational-group {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	column-gap: 1.5rem;
+}
+.casa-operational-group > h2, .casa-operational-group > .notice,
+.casa-operational-group > [data-external-url], .casa-operational-group > [data-tickets-note],
+.casa-operational-group > .casa-operational-field-wide { grid-column: 1 / -1; }
+.casa-operational-group > h2, .casa-ticket-types > h2 { margin: 0 0 .5rem; }
+.casa-operational-field { min-width: 0; margin: .75rem 0; }
+.casa-operational-field > label, .casa-ticket-field > label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: .4rem;
+}
+.casa-operational-field input:not([type="checkbox"]),
+.casa-operational-field select, .casa-operational-field textarea,
+.casa-ticket-field input { box-sizing: border-box; width: 100%; max-width: 100%; }
+.casa-operational-field .description { margin: .35rem 0 0; }
 .casa-operational [data-poster-preview] img { max-width: 160px; height: auto; margin-bottom: .5rem; }
-.casa-operational-action { display: inline-block; margin-right: .5rem !important; }
-.casa-operational-buttons { display: flex; flex-wrap: wrap; gap: .5rem; }
-.casa-operational .notice ul { list-style: disc; margin-left: 1.5rem; }
-.casa-operational [hidden] { display: none; }
+.casa-operational-sales-note {
+	max-width: 1040px;
+	padding: .75rem 1rem;
+	background: #fff8e5;
+	border-left: 4px solid #dba617;
+	box-sizing: border-box;
+}
+.casa-operational-buttons, .casa-ticket-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: .75rem;
+}
+.casa-operational-buttons { margin: 1.25rem 0; }
+.casa-operational-action { display: inline-block; margin: .25rem .5rem .25rem 0; }
+.casa-operational .notice ul, .casa-ticket-types .notice ul { list-style: disc; margin-left: 1.5rem; }
+.casa-operational [hidden], .casa-ticket-types [hidden] { display: none; }
+.casa-ticket-context { display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; }
+.casa-ticket-card { margin: .75rem 0; border: 1px solid #c3c4c7; border-radius: 4px; }
+.casa-ticket-card > summary { cursor: pointer; padding: .7rem 1rem; font-weight: 600; }
+.casa-ticket-card[open] > summary { border-bottom: 1px solid #dcdcde; }
+.casa-ticket-card > p { margin: .75rem 1rem; }
+.casa-ticket-form {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: .75rem 1.25rem;
+	padding: .25rem 1rem 1rem;
+}
+.casa-ticket-field { min-width: 0; }
+.casa-ticket-actions { grid-column: 1 / -1; justify-content: space-between; margin-top: .25rem; }
+.casa-operational :is(input, select, textarea, button, a, summary):focus-visible,
+.casa-ticket-types :is(input, button, a, summary):focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+}
+@media (max-width: 782px) {
+	.casa-operational-group, .casa-ticket-form { grid-template-columns: minmax(0, 1fr); }
+	.casa-operational-group, .casa-ticket-types, .casa-operational > section { padding: 1rem; }
+	.casa-operational-buttons .button, .casa-ticket-actions .button { min-height: 40px; }
+}
