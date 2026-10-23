@@ -118,23 +118,3 @@ function filter_programador_admin_bar( $bar ) {
 	);
 }
 add_action( 'admin_bar_menu', __NAMESPACE__ . '\\filter_programador_admin_bar', PHP_INT_MAX );
-
-/**
- * After logging in without a specific destination, the Programador lands
- * on the events list instead of the (hidden) Escritorio.
- *
- * @param string           $redirect_to Destination.
- * @param string           $requested   Requested destination ('' = none).
- * @param WP_User|\WP_Error $user        User.
- * @return string
- */
-function programador_login_redirect( $redirect_to, $requested, $user ) {
-	if ( ! $user instanceof WP_User || ! Core\is_programador( $user ) ) {
-		return $redirect_to;
-	}
-	if ( '' === (string) $requested || untrailingslashit( $requested ) === untrailingslashit( admin_url() ) ) {
-		return admin_url( events_menu_slug() );
-	}
-	return $redirect_to;
-}
-add_filter( 'login_redirect', __NAMESPACE__ . '\\programador_login_redirect', 10, 3 );

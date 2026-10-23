@@ -19,6 +19,23 @@ function operational_url( $id = 0 ) {
 	return add_query_arg( array( 'page' => OPERATIONAL_PAGE, 'event_id' => $id ), admin_url( 'edit.php?post_type=' . Core\POST_TYPE ) );
 }
 
+/** WordPress login takes event staff directly to the existing form. */
+function programador_login_redirect( $redirect, $requested, $user ) {
+	return $user instanceof \WP_User && Core\is_programador( $user )
+		? operational_url() : $redirect;
+}
+add_filter( 'login_redirect', __NAMESPACE__ . '\\programador_login_redirect', 10, 3 );
+
+/** The generic dashboard is not the Programador's landing page. */
+function programador_dashboard_redirect() {
+	global $pagenow;
+	if ( Core\is_programador() && 'index.php' === $pagenow ) {
+		wp_safe_redirect( operational_url() );
+		exit;
+	}
+}
+add_action( 'admin_init', __NAMESPACE__ . '\\programador_dashboard_redirect', 1 );
+
 /** Send WordPress's Add New link straight to the permitted Programador form. */
 function operational_new_event_url( $url, $path ) {
 	if ( ! Core\is_programador() || ! current_user_can( Core\event_capabilities()['create_posts'] ) ) { return $url; }

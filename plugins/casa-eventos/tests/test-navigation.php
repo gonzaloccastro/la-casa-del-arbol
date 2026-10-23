@@ -1,7 +1,7 @@
 <?php
 /**
  * Programador navigation (inc/admin/navigation.php): left menu allowlist,
- * admin bar reduced to public-site navigation, login destination, and the
+ * admin bar reduced to public-site navigation, Event access routing, and the
  * guarantee that navigation never touches capabilities.
  *
  * The rendered menu and admin bar are verified in the LocalWP runtime QA.
@@ -51,6 +51,8 @@ class WP_Admin_Bar {
 }
 
 require_once dirname( __DIR__ ) . '/inc/admin/navigation.php';
+require_once dirname( __DIR__ ) . '/inc/admin/operational.php';
+require_once dirname( __DIR__ ) . '/inc/commerce/access.php';
 
 /** A core-like admin menu for a user with read + upload_files + Event caps. */
 function t_core_menu() {
@@ -129,10 +131,25 @@ t_eq( t_core_menu(), $GLOBALS['menu'], 'administrator holding the role: menu unt
 $GLOBALS['t_is_admin'] = false;
 
 t_group( 'navigation/login destination' );
-t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento', Admin\programador_login_redirect( admin_url(), '', $programador ), 'Programador without destination → events list' );
-t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento', Admin\programador_login_redirect( admin_url(), 'http://site.test/wp-admin/', $programador ), 'Programador sent to /wp-admin/ → events list' );
-t_eq( 'http://site.test/wp-admin/upload.php', Admin\programador_login_redirect( 'http://site.test/wp-admin/upload.php', 'http://site.test/wp-admin/upload.php', $programador ), 'explicit destination kept' );
+$GLOBALS['t_current_user'] = $programador;
+t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento&page=casa-eventos-operational&event_id=0', Admin\programador_login_redirect( admin_url(), '', $programador ), 'Programador without destination → Cargar evento' );
+t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento&page=casa-eventos-operational&event_id=0', Admin\programador_login_redirect( admin_url(), 'http://site.test/wp-admin/', $programador ), 'Programador sent to /wp-admin/ → Cargar evento' );
+t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento&page=casa-eventos-operational&event_id=0', Admin\programador_login_redirect( 'http://site.test/wp-admin/upload.php', 'http://site.test/wp-admin/upload.php', $programador ), 'Programador explicit destination still lands on Cargar evento' );
 t_eq( admin_url(), Admin\programador_login_redirect( admin_url(), '', $admin ), 'administrator unchanged' );
+t_eq( false, \CasaEventos\Commerce\programador_woo_admin_access( true ), 'Woo admin restriction exempted only for event staff' );
+t_eq( false, \CasaEventos\Commerce\programador_woo_admin_bar( true ), 'Woo keeps Programador logout bar visible' );
+t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento&page=casa-eventos-operational&event_id=0', \CasaEventos\Commerce\programador_woo_login_redirect( 'http://site.test/my-account/', $programador ), 'Woo login goes to Cargar evento' );
+t_eq( 'http://site.test/wp-admin/edit.php?post_type=casa_evento&page=casa-eventos-operational&event_id=0', \CasaEventos\Commerce\programador_account_destination( true, false ), 'My Account routes to Cargar evento' );
+t_eq( null, \CasaEventos\Commerce\programador_account_destination( true, true ), 'Woo account logout remains available' );
+$GLOBALS['t_current_user'] = $admin;
+t_eq( true, \CasaEventos\Commerce\programador_woo_admin_access( true ), 'administrator Woo behavior unchanged' );
+t_eq( true, \CasaEventos\Commerce\programador_woo_admin_bar( true ), 'administrator admin bar behavior unchanged' );
+t_eq( null, \CasaEventos\Commerce\programador_account_destination( true, false ), 'administrator account route unchanged' );
+$GLOBALS['t_current_user'] = $editor;
+t_eq( true, \CasaEventos\Commerce\programador_woo_admin_access( true ), 'other roles retain Woo restriction' );
+t_eq( 'http://site.test/my-account/', \CasaEventos\Commerce\programador_woo_login_redirect( 'http://site.test/my-account/', $editor ), 'other roles retain Woo login destination' );
+t_eq( null, \CasaEventos\Commerce\programador_account_destination( true, false ), 'customer account route unchanged' );
+$GLOBALS['t_current_user'] = $programador;
 
 t_group( 'navigation/never authorization' );
 $src = file_get_contents( dirname( __DIR__ ) . '/inc/admin/navigation.php' );

@@ -14,6 +14,7 @@ require_once __DIR__ . '/reminders.php';
 require_once __DIR__ . '/refunds.php';
 require_once __DIR__ . '/export.php';
 require_once __DIR__ . '/purchase-guard.php';
+require_once __DIR__ . '/access.php';
 
 function available() {
 	return class_exists( 'WC_Product_Variable' ) && class_exists( 'WC_Product_Variation' )

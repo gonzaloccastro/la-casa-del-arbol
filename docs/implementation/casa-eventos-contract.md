@@ -259,9 +259,9 @@ Capabilities (the complete role): `read`, `upload_files`, `edit_casa_eventos`, `
     - "Salir" uses WordPress's own logout URL and nonce (`wp_logout_url()`).
     - Everything else is removed: the WordPress logo, updates, comments, "+ Nuevo", the account/profile menu, search, the site-name submenu, and "Editar evento".
     - The admin bar is not disabled, and the theme is not involved.
-  - **Login:** without a specific destination, the Programador lands on the events list.
+  - **Login:** WordPress and WooCommerce login send the Programador to the existing "Cargar evento" form. WooCommerce My Account pages redirect there for this role; the Woo logout endpoint remains available.
   - The navigation applies to users holding the role who are not administrators (`is_programador()`). Administrators keep the normal menu and admin bar.
-- **Navigation is not authorization.** The Programador keeps `read` and `upload_files`, so Escritorio (`index.php`) and Perfil (`profile.php`) stay reachable by URL, as WordPress needs for account behavior. Every other screen is refused by capability checks (403), not hidden with CSS or redirects.
+- **Navigation is not authorization.** The Programador keeps `read` and `upload_files`; `index.php` redirects to "Cargar evento" and Perfil (`profile.php`) remains reachable for account behavior. WooCommerce's generic admin restriction is bypassed only for this role, without granting `edit_posts` or WooCommerce capabilities. Other restricted screens are refused by capability checks (403), not hidden with CSS.
 - **Media:** `upload_files` allows uploading and browsing the library, and selecting any existing image as a poster. Core maps editing an attachment to the generic `edit_posts`. One narrow `map_meta_cap` rule lets a user who holds `upload_files` and `edit_casa_eventos` edit the details (alt text) of **images they uploaded themselves**. Other people's media stay read-only, and deleting media keeps core's rules (the Programador cannot).
 - The **WordPress Editor, Author and Contributor roles get no Event or category capability** (closed decision). Event operation belongs to Administrator and Programador only.
 
