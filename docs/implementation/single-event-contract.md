@@ -234,3 +234,22 @@ Gutters and the content column follow the layout contract (32 / 16px, 1376px col
 - **Description headings and lists** are not in the approved screen (it shows one paragraph). Their styling (sizes, spacing, indent) is a restrained extension of the approved type system, needed so editorial content works.
 - **Mobile CTA sizes** (14 / 13px): the approved mobile screen's values, added to the shared CTA row. Home and Agenda don't use `.lcda-event-cta`.
 - **Tablet:** 2 columns as the handoff says. At 768–800px the info column is narrow (373–391px): metadata values wrap inside their cells and the CTA row wraps. Flagged for design review, as §1.21 asks, rather than improvised.
+
+## T9 checkout frontend candidate (2026-10-26; feature branch only)
+
+The earlier "no ticket selector yet" sections describe the E2 baseline. The T9
+feature candidate places the existing plugin shortcode
+`[lcda_ticket_checkout event_id="…"]` in the reserved `.lcda-ticket-types`
+position when `Event::cta()` reports an available `tickets` action. The theme
+still decides only placement; casa-eventos renders the selector and owns price,
+currency, availability, reservation and checkout rules. No second checkout or
+Event metadata is introduced in the theme.
+
+With the public sales gate closed, the Single Event keeps the existing
+non-interactive "Entradas a la venta próximamente" note. In isolated QA, both
+the ticket-sales and T3 checkout gates were opened temporarily on the
+disposable clone; the Event page then rendered ticket name, currency and price,
+available quantity, a live total and the existing direct checkout form. The
+standalone buyer and pending-order pages received a viewport and responsive
+controls. Chrome QA at 390, 768 and 1280 px observed no horizontal overflow.
+This candidate is not a Payway integration, acceptance, merge or deployment.

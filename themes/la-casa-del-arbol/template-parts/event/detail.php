@@ -71,7 +71,16 @@ $lcda_action    = lcda_event_action( $lcda_event );
 				<?php if ( '' !== $lcda_secondary ) : ?>
 					<p class="lcda-event-detail__secondary"><?php echo esc_html( $lcda_secondary ); ?></p>
 				<?php endif; ?>
-				<?php if ( $lcda_action && 'link' === $lcda_action['type'] ) : ?>
+				<?php if ( $lcda_action && 'ticket_selector' === $lcda_action['type'] ) : ?>
+					<?php $lcda_selector = do_shortcode( '[lcda_ticket_checkout event_id="' . (int) $lcda_action['event_id'] . '"]' ); ?>
+					<?php if ( '' !== trim( $lcda_selector ) ) : ?>
+						<div class="lcda-ticket-types">
+							<?php echo $lcda_selector; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- the plugin renders and escapes its public selector. ?>
+						</div>
+					<?php else : ?>
+						<p class="lcda-event-status"><?php esc_html_e( 'Entradas a la venta próximamente', 'la-casa-del-arbol' ); ?></p>
+					<?php endif; ?>
+				<?php elseif ( $lcda_action && 'link' === $lcda_action['type'] ) : ?>
 					<div class="lcda-event-cta">
 						<a class="lcda-btn" <?php echo $lcda_action['attributes']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in lcda_event_action(). ?>><?php echo esc_html( $lcda_action['label'] ); ?></a>
 					</div>

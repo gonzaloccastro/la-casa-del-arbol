@@ -1,0 +1,178 @@
+/* Public ticket selector and standalone guest checkout. */
+.casa-ticket-selector,
+.casa-ticket-selector *,
+.casa-checkout-page,
+.casa-checkout-page * {
+	box-sizing: border-box;
+}
+.casa-ticket-selector {
+	max-width: 100%;
+	padding: 1.25rem;
+	border: 2px solid #181818;
+	background: #fff;
+	color: #181818;
+}
+.casa-ticket-selector__title {
+	margin: 0 0 .5rem;
+}
+.casa-ticket-selector__capacity,
+.casa-ticket-selector__notice {
+	margin: 0 0 1rem;
+	line-height: 1.5;
+}
+.casa-ticket-selector__types {
+	display: grid;
+	gap: .75rem;
+}
+.casa-ticket-selector__type {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: .5rem 1rem;
+	padding: .875rem;
+	border: 1px solid #777;
+	min-width: 0;
+}
+.casa-ticket-selector__description {
+	display: grid;
+	gap: .125rem;
+	flex: 1 1 11rem;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.casa-ticket-selector__price {
+	font-weight: 700;
+}
+.casa-ticket-selector__availability {
+	font-size: .875rem;
+}
+.casa-ticket-selector__type label {
+	flex: 0 1 8rem;
+	font-size: .875rem;
+}
+.casa-ticket-selector__type input {
+	width: 5.5rem;
+	max-width: 100%;
+	min-height: 44px;
+	padding: .5rem;
+	border: 1px solid #181818;
+	border-radius: 0;
+	font-size: 1rem;
+}
+.casa-ticket-selector__summary {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: .5rem 1rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 2px solid #181818;
+	font-weight: 700;
+}
+.casa-ticket-selector__summary output {
+	overflow-wrap: anywhere;
+}
+.casa-ticket-selector__feedback {
+	min-height: 1.5em;
+	margin: .5rem 0;
+	color: #a52118;
+}
+.casa-ticket-selector__submit {
+	min-height: 44px;
+}
+.casa-ticket-selector :focus-visible,
+.casa-checkout-page :focus-visible {
+	outline: 3px solid #b5251a;
+	outline-offset: 2px;
+}
+.casa-ticket-selector button:disabled {
+	opacity: .55;
+	cursor: not-allowed;
+}
+.casa-checkout-page {
+	margin: 0;
+	min-width: 0;
+	background: #f4f0e7;
+	color: #181818;
+	font: 400 16px/1.5 system-ui, sans-serif;
+}
+.casa-checkout-page__main {
+	width: min(100% - 2rem, 42rem);
+	margin: clamp(1.5rem, 5vw, 4rem) auto;
+	padding: clamp(1.25rem, 4vw, 2.25rem);
+	border: 2px solid #181818;
+	background: #fff;
+	overflow-wrap: anywhere;
+}
+.casa-checkout-page__back {
+	display: inline-block;
+	min-height: 44px;
+	padding: .5rem 0;
+	color: #a52118;
+}
+.casa-checkout-page h1 {
+	margin: .5rem 0 1rem;
+	font-size: clamp(1.75rem, 5vw, 2.5rem);
+	line-height: 1.1;
+}
+.casa-checkout-page__notice {
+	margin: 0 0 1.5rem;
+}
+.casa-checkout-form {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+.casa-checkout-form label {
+	display: block;
+	min-width: 0;
+	font-weight: 600;
+}
+.casa-checkout-form input:not([type="checkbox"]) {
+	display: block;
+	width: 100%;
+	min-width: 0;
+	min-height: 44px;
+	margin-top: .375rem;
+	padding: .625rem;
+	border: 1px solid #555;
+	border-radius: 0;
+	font: inherit;
+}
+.casa-checkout-form__consent {
+	grid-column: 1 / -1;
+	display: flex !important;
+	align-items: start;
+	gap: .75rem;
+	font-weight: 400 !important;
+}
+.casa-checkout-form__consent input {
+	width: 1.25rem;
+	height: 1.25rem;
+	margin: .125rem 0 0;
+	flex: none;
+}
+.casa-checkout-form button {
+	grid-column: 1 / -1;
+	min-height: 48px;
+	padding: .75rem 1rem;
+	border: 2px solid #181818;
+	background: #b5251a;
+	color: #fff;
+	font: 700 1rem/1.2 system-ui, sans-serif;
+	cursor: pointer;
+}
+@media (max-width: 600px) {
+	.casa-ticket-selector {
+		padding: 1rem;
+	}
+	.casa-ticket-selector__submit {
+		width: 100%;
+	}
+	.casa-checkout-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.casa-checkout-page__main {
+		margin: 1rem auto;
+	}
+}

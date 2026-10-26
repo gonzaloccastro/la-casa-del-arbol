@@ -176,3 +176,29 @@ t_eq( true, Commerce\bind_reservation_order( $id, $retry['id'], $key, 42 )['repl
 t2_error( 'conflict', Commerce\bind_reservation_order( $id, $retry['id'], $key, 43 ), 'different order cannot replace binding' );
 $GLOBALS['wpdb']->busy = true;
 t2_error( 'busy', Commerce\reserve( $id, array( $created['type_id'] => 1 ), t2_key(), $now ), 'busy event lock fails closed' );
+
+
+t_group( 'T9/selector reflects held type and global capacity' );
+$id = t2_fixture();
+$GLOBALS['t_meta'][ $id ]['_casa_capacity'] = 3;
+$first = tt_save( $id, 0, tt_fields( array( 'name' => 'General', 'capacity' => '5', 'active' => '1', 'maximum' => '3' ) ) );
+$second = tt_save( $id, 0, tt_fields( array( 'name' => 'Anticipada', 'capacity' => '5', 'active' => '1', 'maximum' => '3' ) ) );
+$a = $first['type_id']; $b = $second['type_id'];
+t_ok( ! is_wp_error( Commerce\reserve( $id, array( $a => 2 ), t2_key(), $now ) ), 'fixture hold consumes two of three event places' );
+t_eq( false, Commerce\checkout_sales_enabled( $id ), 'closed public gate hides selector' );
+remove_all_filters( 'casa_eventos/ticket_sales_available' );
+add_filter( 'casa_eventos/ticket_sales_available', '__return_true' );
+add_filter( 'casa_eventos/t3_checkout_enabled', '__return_true' );
+$data = Commerce\checkout_selector_data( $id, $now );
+t_ok( ! is_wp_error( $data ), 'selector reads a reconciled ledger' );
+t_eq( 1, $data['global_available'], 'global availability excludes active hold' );
+$by_id = array_column( $data['types'], null, 'id' );
+t_eq( 1, $by_id[ $a ]['available'], 'held type respects global remainder' );
+t_eq( 1, $by_id[ $b ]['maximum'], 'other type cannot exceed remaining global capacity' );
+t_eq( 'ARS', $by_id[ $a ]['currency'], 'selector uses persisted type currency' );
+$GLOBALS['t_meta'][ $id ]['_casa_capacity'] = 10;
+$GLOBALS['tt_products'][ $b ]->update_meta_data( '_lcda_ticket_currency', 'USD' );
+t2_error( 'currency', Commerce\reserve( $id, array( $a => 1, $b => 1 ), t2_key(), $now ), 'mixed currency rejected before another hold is inserted' );
+t_eq( 1, count( $GLOBALS['wpdb']->rows ), 'mixed currency leaves ledger unchanged' );
+remove_filter( 'casa_eventos/ticket_sales_available', '__return_true' );
+remove_filter( 'casa_eventos/t3_checkout_enabled', '__return_true' );

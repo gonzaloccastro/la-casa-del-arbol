@@ -263,79 +263,197 @@ function checkout_cookie_secret( $create = false ) {
 	$_COOKIE[ CHECKOUT_COOKIE ] = $secret;
 	return $secret;
 }
+
+/** Both gates must be explicitly open before any public ticket control appears. */
+function checkout_sales_enabled( $event_id ) {
+	$event_id = integer_value( $event_id, 1 );
+	if ( null === $event_id || ! checkout_enabled() ) { return false; }
+	$event = Core\Event::get( $event_id );
+	if ( ! $event ) { return false; }
+	$cta = $event->cta();
+	return ! empty( $cta['available'] ) && Core\ACCESS_TICKETS === $cta['mode'];
+}
+
+/** A read-only, lock-consistent projection of the same stock and holds used by reserve(). */
+function checkout_selector_data( $event_id, $now = null ) {
+	global $wpdb;
+	if ( ! checkout_sales_enabled( $event_id ) || ! available()
+		|| (int) get_option( RESERVATION_SCHEMA_OPTION, 0 ) !== RESERVATION_SCHEMA
+		|| ( function_exists( 'wc_tax_enabled' ) && wc_tax_enabled() ) ) {
+		return error( 'closed', 'La venta de entradas no está disponible.' );
+	}
+	$now = null === $now ? time() : integer_value( $now, 0 );
+	if ( null === $now ) { return error( 'request', 'El reloj no es válido.' ); }
+	$owned_before = ! empty( $GLOBALS['lcda_config_locks'][ $event_id ] );
+	$lock = acquire( $event_id );
+	if ( is_wp_error( $lock ) ) { return $lock; }
+	try {
+		refresh_locked_reads( $event_id );
+		if ( ! checkout_sales_enabled( $event_id ) ) { return error( 'closed', 'La venta de entradas no está disponible.' ); }
+		$event = Core\Event::get( $event_id );
+		$start = $event ? Core\gmt_datetime( $event->start_gmt() ) : null;
+		if ( ! $event || ! $start || $start->getTimestamp() <= $now ) { return error( 'closed', 'La venta de entradas no está disponible.' ); }
+		$parent = parent_product( $event_id );
+		if ( is_wp_error( $parent ) || ! $parent || ! zero_consumption( $parent, true ) ) {
+			return error( 'unknown', 'No se puede verificar la disponibilidad.' );
+		}
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id,status,expires_at,quantities FROM ' . reservation_table() . ' WHERE event_id = %d', $event_id ) );
+		if ( $wpdb->last_error ) { return error( 'ledger', 'No se puede verificar la disponibilidad.' ); }
+		$has_paid_history = false;
+		foreach ( (array) $rows as $row ) {
+			if ( in_array( (string) $row->status, array( 'paid', 'refunded' ), true ) ) { $has_paid_history = true; break; }
+		}
+		$refunds = (int) get_option( REFUND_SCHEMA_OPTION, 0 ) !== REFUND_SCHEMA && ! $has_paid_history
+			? array() : confirmed_refund_quantities( $event_id );
+		if ( is_wp_error( $refunds ) ) { return $refunds; }
+		$held = reservation_held( $rows, $now, $refunds );
+		if ( is_wp_error( $held ) ) { return $held; }
+		$global = max( 0, $event->capacity() - $held['global'] );
+		$types = array();
+		foreach ( variations( $parent ) as $type ) {
+			if ( '1' !== (string) $type->get_meta( '_lcda_ticket_active' )
+				|| '1' !== (string) $type->get_meta( '_lcda_ticket_request_complete' ) ) { continue; }
+			$price = (string) $type->get_regular_price( 'edit' );
+			$currency = (string) $type->get_meta( '_lcda_ticket_currency' );
+			if ( ! is_numeric( $price ) || (float) $price < 0 || ! preg_match( '/^[A-Z]{3}$/D', $currency ) ) {
+				return error( 'unknown', 'No se puede verificar el precio.' );
+			}
+			$cutoff = (string) $type->get_meta( '_lcda_ticket_cutoff_gmt' );
+			$cutoff_time = $cutoff ? Core\gmt_datetime( $cutoff ) : null;
+			$open = ! $cutoff || ( $cutoff_time && $cutoff_time->getTimestamp() > $now );
+			$remaining = $open ? max( 0, min( $global, (int) $type->get_stock_quantity( 'edit' ) - ( $held['types'][ $type->get_id() ] ?? 0 ) ) ) : 0;
+			$types[] = array(
+				'id' => $type->get_id(), 'name' => (string) $type->get_meta( '_lcda_ticket_name' ),
+				'price' => $price, 'currency' => $currency, 'available' => $remaining,
+				'maximum' => min( 10, (int) $type->get_meta( '_lcda_ticket_maximum' ), $remaining ),
+				'closed' => ! $open,
+			);
+		}
+		return array( 'global_available' => $global, 'types' => $types );
+	} catch ( \Throwable $exception ) {
+		return error( 'unknown', 'No se puede verificar la disponibilidad.' );
+	} finally {
+		if ( ! $owned_before ) { release( $event_id ); }
+	}
+}
+
 function checkout_prepare_page() {
 	if ( ! checkout_enabled() || ! is_singular() ) { return; }
 	$post = get_post( get_queried_object_id() );
-	if ( $post && has_shortcode( $post->post_content, 'lcda_ticket_checkout' ) ) {
+	if ( ! $post ) { return; }
+	if ( ( Core\POST_TYPE === $post->post_type && checkout_sales_enabled( $post->ID ) )
+		|| has_shortcode( $post->post_content, 'lcda_ticket_checkout' ) ) {
 		nocache_headers();
 		checkout_cookie_secret( true );
 	}
 }
 add_action( 'template_redirect', __NAMESPACE__ . '\\checkout_prepare_page', 5 );
 
-/** Optional plugin-owned form surface; public rendering remains gated. */
+function checkout_public_assets() {
+	if ( ! checkout_enabled() || ! is_singular() ) { return; }
+	$post = get_post( get_queried_object_id() );
+	if ( ! $post || ( ! ( Core\POST_TYPE === $post->post_type && checkout_sales_enabled( $post->ID ) )
+		&& ! has_shortcode( $post->post_content, 'lcda_ticket_checkout' ) ) ) { return; }
+	wp_enqueue_style( 'casa-ticket-checkout', CASA_EVENTOS_URL . 'assets/public/ticket-checkout.css', array(), CASA_EVENTOS_VERSION );
+	wp_enqueue_script( 'casa-ticket-selector', CASA_EVENTOS_URL . 'assets/public/ticket-selector.js', array(), CASA_EVENTOS_VERSION, true );
+}
+add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\\checkout_public_assets', 20 );
+
+/** Existing plugin-owned selector, usable on the Event page or through its shortcode. */
 function checkout_selector_shortcode( $attributes ) {
-	if ( ! checkout_enabled() ) { return ''; }
 	$event_id = absint( $attributes['event_id'] ?? 0 );
+	if ( ! checkout_sales_enabled( $event_id ) ) { return ''; }
 	$secret = checkout_cookie_secret( true );
-	$parent = $event_id ? parent_product( $event_id ) : null;
-	if ( ! $secret || is_wp_error( $parent ) || ! $parent ) { return ''; }
+	if ( ! $secret ) { return ''; }
+	$data = checkout_selector_data( $event_id );
+	if ( is_wp_error( $data ) || ! $data['types'] ) {
+		return '<p class="casa-ticket-selector__notice">Las entradas no están disponibles en este momento.</p>';
+	}
 	$key = wp_generate_uuid4();
 	$nonce = checkout_csrf( 'start', $event_id, $key, $secret );
 	ob_start();
 	?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+	<form class="casa-ticket-selector" data-casa-ticket-selector data-global-available="<?php echo esc_attr( $data['global_available'] ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="lcda_ticket_start">
 		<input type="hidden" name="event_id" value="<?php echo esc_attr( $event_id ); ?>">
 		<input type="hidden" name="request_key" value="<?php echo esc_attr( $key ); ?>">
 		<input type="hidden" name="checkout_nonce" value="<?php echo esc_attr( $nonce ); ?>">
-		<?php foreach ( variations( $parent ) as $type ) : ?>
-			<?php if ( '1' !== (string) $type->get_meta( '_lcda_ticket_active' ) || '1' !== (string) $type->get_meta( '_lcda_ticket_request_complete' ) ) { continue; } ?>
-			<label><?php echo esc_html( (string) $type->get_meta( '_lcda_ticket_name' ) ); ?>
-				<input type="number" name="lines[<?php echo esc_attr( $type->get_id() ); ?>]" min="0" max="<?php echo esc_attr( (int) $type->get_meta( '_lcda_ticket_maximum' ) ); ?>" value="0">
-			</label>
-		<?php endforeach; ?>
-		<button type="submit">Comprar entradas</button>
+		<h2 class="casa-ticket-selector__title">Elegí tus entradas</h2>
+		<p class="casa-ticket-selector__capacity">Aforo disponible ahora: <?php echo esc_html( $data['global_available'] ); ?>. La disponibilidad se confirma al reservar.</p>
+		<div class="casa-ticket-selector__types">
+			<?php foreach ( $data['types'] as $type ) : ?>
+				<div class="casa-ticket-selector__type" data-price="<?php echo esc_attr( $type['price'] ); ?>" data-currency="<?php echo esc_attr( $type['currency'] ); ?>">
+					<div class="casa-ticket-selector__description">
+						<strong><?php echo esc_html( $type['name'] ); ?></strong>
+						<span class="casa-ticket-selector__price"><?php echo esc_html( $type['currency'] . ' ' . number_format_i18n( (float) $type['price'], wc_get_price_decimals() ) ); ?></span>
+						<span class="casa-ticket-selector__availability"><?php echo esc_html( $type['closed'] ? 'Venta cerrada' : ( $type['available'] ? 'Disponibles: ' . $type['available'] : 'Agotadas' ) ); ?></span>
+					</div>
+					<label for="casa-ticket-quantity-<?php echo esc_attr( $type['id'] ); ?>">Cantidad de <?php echo esc_html( $type['name'] ); ?></label>
+					<input id="casa-ticket-quantity-<?php echo esc_attr( $type['id'] ); ?>" type="number" inputmode="numeric" name="lines[<?php echo esc_attr( $type['id'] ); ?>]" min="0" max="<?php echo esc_attr( $type['maximum'] ); ?>" step="1" value="0" <?php disabled( 0 === $type['maximum'] ); ?>>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<div class="casa-ticket-selector__summary">
+			<span>Total de entradas</span>
+			<output data-casa-ticket-total aria-live="polite">Elegí una cantidad para ver el total.</output>
+		</div>
+		<p class="casa-ticket-selector__feedback" data-casa-ticket-feedback aria-live="polite"></p>
+		<button class="lcda-btn casa-ticket-selector__submit" type="submit">Continuar al checkout</button>
+		<noscript><p>El total se mostrará al activar JavaScript; el servidor verificará precio y cupo antes de reservar.</p></noscript>
 	</form>
 	<?php
 	return ob_get_clean();
 }
 if ( function_exists( 'add_shortcode' ) ) { add_shortcode( 'lcda_ticket_checkout', __NAMESPACE__ . '\\checkout_selector_shortcode' ); }
 
+function checkout_document_start( $title ) {
+	?><!doctype html>
+	<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+	<title><?php echo esc_html( $title ); ?></title>
+	<link rel="stylesheet" href="<?php echo esc_url( CASA_EVENTOS_URL . 'assets/public/ticket-checkout.css?ver=' . CASA_EVENTOS_VERSION ); ?>">
+	</head><body class="casa-checkout-page"><main class="casa-checkout-page__main"><?php
+}
+function checkout_document_end() {
+	?></main></body></html><?php
+}
 function checkout_guest_form( $event_id, $reservation, $request_key, $secret ) {
 	$nonce = checkout_csrf( 'submit:' . $reservation['id'], $event_id, $request_key, $secret );
-	?><!doctype html><html lang="es"><meta charset="utf-8"><title>Datos de compra</title>
-	<h1>Datos de compra</h1><p>La reserva vence a las <?php echo esc_html( gmdate( 'Y-m-d H:i:s', $reservation['expires_at'] ) ); ?> UTC.</p>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+	checkout_document_start( 'Datos de compra' );
+	?>
+	<a class="casa-checkout-page__back" href="<?php echo esc_url( get_permalink( $event_id ) ); ?>">← Volver al evento</a>
+	<h1>Datos de compra</h1>
+	<p class="casa-checkout-page__notice">Tu reserva vence el <?php echo esc_html( wp_date( 'd/m/Y \a \l\a\s H:i', $reservation['expires_at'], wp_timezone() ) ); ?>.</p>
+	<form class="casa-checkout-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="lcda_ticket_submit">
 		<input type="hidden" name="event_id" value="<?php echo esc_attr( $event_id ); ?>">
 		<input type="hidden" name="reservation_id" value="<?php echo esc_attr( $reservation['id'] ); ?>">
 		<input type="hidden" name="request_key" value="<?php echo esc_attr( $request_key ); ?>">
 		<input type="hidden" name="checkout_nonce" value="<?php echo esc_attr( $nonce ); ?>">
-		<label>Nombre <input name="first_name" required maxlength="100"></label>
-		<label>Apellido <input name="last_name" required maxlength="100"></label>
-		<label>Email <input type="email" name="email" required maxlength="254"></label>
-		<label>Telefono <input type="tel" name="phone" required maxlength="40"></label>
-		<label><input type="checkbox" name="newsletter" value="1"> Quiero recibir novedades de La Casa</label>
-		<button type="submit">Crear pedido</button>
-	</form></html><?php
+		<label>Nombre <input name="first_name" autocomplete="given-name" required maxlength="100"></label>
+		<label>Apellido <input name="last_name" autocomplete="family-name" required maxlength="100"></label>
+		<label>Email <input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+		<label>Teléfono <input type="tel" name="phone" autocomplete="tel" required maxlength="40"></label>
+		<label class="casa-checkout-form__consent"><input type="checkbox" name="newsletter" value="1"> Quiero recibir novedades de La Casa</label>
+		<button type="submit">Crear pedido pendiente</button>
+	</form>
+	<?php checkout_document_end();
 }
-function checkout_http_guard() {
-	if ( ! checkout_enabled() ) { wp_die( 'No disponible', '', array( 'response' => 404 ) ); }
-	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( 'Metodo no permitido', '', array( 'response' => 405 ) ); }
+function checkout_http_guard( $event_id ) {
+	if ( ! checkout_sales_enabled( $event_id ) ) { wp_die( 'No disponible', '', array( 'response' => 404 ) ); }
+	if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( 'Método no permitido', '', array( 'response' => 405 ) ); }
 	nocache_headers();
 	$secret = checkout_cookie_secret();
-	if ( ! $secret ) { wp_die( 'Sesion no disponible', '', array( 'response' => 403 ) ); }
+	if ( ! $secret ) { wp_die( 'Sesión no disponible', '', array( 'response' => 403 ) ); }
 	return $secret;
 }
 function checkout_post_start() {
-	$secret = checkout_http_guard();
 	$event_id = absint( $_POST['event_id'] ?? 0 );
+	$secret = checkout_http_guard( $event_id );
 	$key = isset( $_POST['request_key'] ) && is_string( $_POST['request_key'] ) ? sanitize_text_field( wp_unslash( $_POST['request_key'] ) ) : '';
 	$nonce = isset( $_POST['checkout_nonce'] ) && is_string( $_POST['checkout_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['checkout_nonce'] ) ) : '';
-	if ( ! hash_equals( checkout_csrf( 'start', $event_id, $key, $secret ), $nonce ) ) { wp_die( 'Solicitud invalida', '', array( 'response' => 403 ) ); }
+	if ( ! hash_equals( checkout_csrf( 'start', $event_id, $key, $secret ), $nonce ) ) { wp_die( 'Solicitud inválida', '', array( 'response' => 403 ) ); }
 	$lines = $_POST['lines'] ?? array();
-	if ( ! is_array( $lines ) ) { wp_die( 'Seleccion invalida', '', array( 'response' => 400 ) ); }
+	if ( ! is_array( $lines ) ) { wp_die( 'Selección inválida', '', array( 'response' => 400 ) ); }
 	$lines = array_filter( wp_unslash( $lines ), static fn( $quantity ) => '0' !== (string) $quantity );
 	$result = start_guest_checkout( $event_id, $lines, $key, $secret );
 	if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 400 ) ); }
@@ -343,16 +461,21 @@ function checkout_post_start() {
 	exit;
 }
 function checkout_post_submit() {
-	$secret = checkout_http_guard();
 	$event_id = absint( $_POST['event_id'] ?? 0 );
+	$secret = checkout_http_guard( $event_id );
 	$reservation_id = absint( $_POST['reservation_id'] ?? 0 );
 	$key = isset( $_POST['request_key'] ) && is_string( $_POST['request_key'] ) ? sanitize_text_field( wp_unslash( $_POST['request_key'] ) ) : '';
 	$nonce = isset( $_POST['checkout_nonce'] ) && is_string( $_POST['checkout_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['checkout_nonce'] ) ) : '';
-	if ( ! hash_equals( checkout_csrf( 'submit:' . $reservation_id, $event_id, $key, $secret ), $nonce ) ) { wp_die( 'Solicitud invalida', '', array( 'response' => 403 ) ); }
+	if ( ! hash_equals( checkout_csrf( 'submit:' . $reservation_id, $event_id, $key, $secret ), $nonce ) ) { wp_die( 'Solicitud inválida', '', array( 'response' => 403 ) ); }
 	$result = submit_guest_checkout( $event_id, $reservation_id, $key, $secret, $_POST );
 	if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 400 ) ); }
-	?><!doctype html><html lang="es"><meta charset="utf-8"><title>Pedido pendiente</title>
-	<h1>Pedido pendiente</h1><p>Pedido <?php echo esc_html( $result['order_id'] ); ?> creado. El pago aun no esta disponible.</p></html><?php
+	checkout_document_start( 'Pedido pendiente' );
+	?>
+	<a class="casa-checkout-page__back" href="<?php echo esc_url( get_permalink( $event_id ) ); ?>">← Volver al evento</a>
+	<h1>Pedido pendiente</h1>
+	<p>Pedido <?php echo esc_html( $result['order_id'] ); ?> creado. El pago aún no está disponible.</p>
+	<?php
+	checkout_document_end();
 	exit;
 }
 add_action( 'admin_post_nopriv_lcda_ticket_start', __NAMESPACE__ . '\\checkout_post_start' );

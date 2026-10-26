@@ -225,6 +225,7 @@ function reserve( $event_id, $lines, $request_key, $now = null, $session_hash = 
 		$by_id = array();
 		foreach ( variations( $parent ) as $type ) { $by_id[ $type->get_id() ] = $type; }
 		$snapshot = array();
+		$currency = null;
 		foreach ( $normalized as $type_id => $quantity ) {
 			$type = $by_id[ $type_id ] ?? null;
 			if ( ! $type || '1' !== (string) $type->get_meta( '_lcda_ticket_request_complete' )
@@ -238,9 +239,14 @@ function reserve( $event_id, $lines, $request_key, $now = null, $session_hash = 
 				$cutoff_time = Core\gmt_datetime( $cutoff );
 				if ( ! $cutoff_time || $cutoff_time->getTimestamp() <= $now ) { return error( 'closed', 'Cerró la venta de un tipo.' ); }
 			}
+			$type_currency = (string) $type->get_meta( '_lcda_ticket_currency' );
+			if ( null !== $currency && $currency !== $type_currency ) {
+				return error( 'currency', 'Elegí entradas de una sola moneda por compra.' );
+			}
+			$currency = $type_currency;
 			$snapshot[ $type_id ] = array( 'quantity' => $quantity, 'uuid' => (string) $type->get_meta( '_lcda_ticket_uuid' ),
 				'name' => (string) $type->get_meta( '_lcda_ticket_name' ),
-				'price' => (string) $type->get_regular_price( 'edit' ), 'currency' => (string) $type->get_meta( '_lcda_ticket_currency' ) );
+				'price' => (string) $type->get_regular_price( 'edit' ), 'currency' => $type_currency );
 		}
 		$snapshot['_event'] = array( 'uuid' => $event->uuid(), 'title' => $event->title(), 'start_local' => $event->start_local(),
 			'start_gmt' => $event->start_gmt(), 'timezone' => $event->timezone(),

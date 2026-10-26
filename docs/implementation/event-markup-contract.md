@@ -234,3 +234,14 @@ Theme patterns that held static demo events. casa-eventos made them obsolete, an
 | Evento (página de demostración): the whole Single Event screen for visual QA (main section + related section). Not a starter pattern: events are never authored as pages | `patterns/demo-event-page.php` | Step 6 |
 
 They held placeholder text only ("Título del evento", "Día · 00:00", "00") and empty image slots. No event data and no artwork ship in the theme. Step 3's single-card demo patterns (`demo-event-card-*`) were removed in Step 3.1: a card inserted on its own landed in the reading column, which is not a layout the design uses. Cards already inserted from them keep working, because styling depends only on classes.
+
+## T9 ticket selector integration candidate (2026-10-26; feature branch only)
+
+The E2 API and presentation rules above remain the baseline. For ticket mode
+only, the theme now uses `Event::cta()` to decide whether to place the existing
+plugin-owned `[lcda_ticket_checkout]` shortcode in the reserved
+`.lcda-ticket-types` slot. This is a public UI integration point, not a theme
+read of WooCommerce or Event metadata. The plugin provides the form, price,
+currency and availability from its commerce read model and revalidates them in
+the reservation coordinator. Closed sales continue to render the established
+"Próximamente" state note.

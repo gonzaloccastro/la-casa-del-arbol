@@ -276,7 +276,9 @@ function lcda_event_action( $event ) {
 				),
 			);
 		}
-		// Own ticket sales (commerce phase) render their purchase control here.
+		if ( 'tickets' === $cta['mode'] ) {
+			return array( 'type' => 'ticket_selector', 'event_id' => $event->id() );
+		}
 		return null;
 	}
 

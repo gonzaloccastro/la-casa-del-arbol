@@ -71,6 +71,13 @@ $ext = lcda_event_action( $ev( 'X', array( '_casa_access_mode' => 'external', '_
 t_eq( 'href="https://www.passline.com/x"', $ext['attributes'], 'external: unchanged, no WhatsApp' );
 t_eq( array( 'note', 'Entradas a la venta próximamente' ), array( lcda_event_action( $ev( 'X', array( '_casa_access_mode' => 'tickets' ) ) )['type'], lcda_event_action( $ev( 'X', array( '_casa_access_mode' => 'tickets' ) ) )['text'] ), 'tickets: unchanged (note, no link)' );
 
+$tickets = $ev( 'Entradas QA', array( '_casa_access_mode' => 'tickets' ) );
+$ticket_sales = static fn() => true;
+add_filter( 'casa_eventos/ticket_sales_available', $ticket_sales );
+$selector = lcda_event_action( $tickets );
+t_eq( array( 'ticket_selector', $tickets->id() ), array( $selector['type'], $selector['event_id'] ), 'available tickets use the existing selector on the Event page' );
+remove_filter( 'casa_eventos/ticket_sales_available', $ticket_sales );
+
 foreach ( $GLOBALS['t_fail'] as $m ) {
 	fwrite( STDERR, "FAIL  {$m}\n" );
 }
